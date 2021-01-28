@@ -11,6 +11,8 @@
     "license": "ISC",
     "dependencies": {
         "express": "^4.17.1",
-        "obs-studio-node": "^0.10.10"
+        "lodash": "^4.17.20",
+        "obs-studio-node": "^0.10.10",
+        "uuid": "^8.3.2"
     }
 }
