@@ -38,22 +38,21 @@ function setValue(data, subCategory, parameter, value) {
         case "OBS_PROPERTY_INT":
             if (!_.isNumber(value))
                 throw new Error("Invalid Value: Must be a number");
-
+            parobj.currentValue = value;
             break;
         case "OBS_PROPERTY_BOOL":
             if (!_.isBoolean(value))
                 throw new Error("Invalid Value: Must be a boolean");
-
+            parobj.currentValue = value;
             break;
+        case "OBS_INPUT_RESOLUTION_LIST":
         case "OBS_PROPERTY_PATH":
-
             if (!_.isString(value))
                 throw new Error("Invalid Value: Must be a valid path");
-
-
+            parobj.currentValue = value;
             break;
         default:
-            throw new Error("Invalid Parameter: Parameter Type Not Supported");
+            throw new Error("Invalid Parameter: Parameter Type '" + parobj.type + "' Not Supported");
     }
 }
 
