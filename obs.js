@@ -108,13 +108,15 @@ function init() {
     console.log("OBS Ready");
 }
 
-function release() {
-
-    if (recording) {
-        recordingStart();
-    }
-
+async function release() {
+    assertInitialized();
     console.log('Shutting down OBS...');
+
+    try {
+        if (recording) {
+            await recordingStop();
+        }
+    } catch { }
 
     try {
         osn.NodeObs.OBS_service_removeCallback();
@@ -135,6 +137,7 @@ function getMicrophones() {
 }
 
 function getAudioDevices(type, subtype) {
+    assertInitialized();
     const dummyDevice = osn.InputFactory.create(type, subtype, { device_id: 'does_not_exist' });
     const devices = dummyDevice.properties.get('device_id').details.items.map(({ name, value }) => {
         return { device_id: value, name, };
@@ -150,9 +153,8 @@ function intersectRect(r1, r2) {
 }
 
 async function recordingStart(setup) {
-    if (recording) {
-        return;
-    }
+    assertInitialized();
+    if (recording) { return; }
 
     try {
         const { captureRegion, captureCursor, speakers, microphones, fps } = setup;
@@ -280,9 +282,8 @@ async function recordingStart(setup) {
 }
 
 async function recordingStop() {
-    if (!recording) {
-        return;
-    }
+    assertInitialized();
+    if (!recording) { return; }
 
     console.log('OBS Stop recording...');
     osn.NodeObs.OBS_service_stopRecording();
@@ -299,6 +300,11 @@ async function recordingStop() {
 
     console.log('OBS Stop recording... Complete');
 }
+
+function assertInitialized() {
+    if (!initialized) throw new Error("OBS is not initialized. Call init() first.");
+}
+
 
 function freeResources() {
     const res = resources;
