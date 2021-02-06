@@ -5,6 +5,8 @@ const { v4: uuid } = require('uuid');
 const osnset = require("./settings");
 const fs = require("fs");
 const screen = require('electron-screen');
+const { Subject } = require("rxjs");
+const { first } = require('rxjs/operators');
 
 let initialized = false;
 let recording = false;
@@ -34,6 +36,14 @@ if (!fs.existsSync(pathObsExe)) {
 console.log("Root directory is: " + pathRoot);
 console.log("OBS is located at: " + pathObsExe);
 
+const signals = new Subject();
+function getNextSignalInfo(predicate) {
+    return new Promise((resolve, reject) => {
+        signals.pipe(first(predicate)).subscribe(signalInfo => resolve(signalInfo));
+        setTimeout(() => reject('Signal wait timeout'), 6000);
+    });
+}
+
 function isRecording() {
     return recording;
 }
@@ -51,6 +61,7 @@ function init() {
 
     osn.NodeObs.OBS_service_connectOutputSignals((signalInfo) => {
         console.log(signalInfo);
+        signals.next(signalInfo);
     });
 
     const initResult = osn.NodeObs.OBS_API_initAPI('en-US', pathData, '1.0.0');
@@ -61,7 +72,11 @@ function init() {
 
     initialized = true;
 
+    osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
+    osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
     console.log("Starting OBS... Complete");
+
+
 
     // console.log("Configuring OBS Default Settings...");
 
@@ -134,134 +149,147 @@ function intersectRect(r1, r2) {
     else return false;
 }
 
-function recordingStart(setup) {
+async function recordingStart(setup) {
     if (recording) {
         return;
     }
 
-    const { captureRegion, captureCursor, speakers, microphones, fps } = setup;
+    try {
+        const { captureRegion, captureCursor, speakers, microphones, fps } = setup;
 
-    if (!captureRegion || !_.isNumber(captureRegion.x) || !_.isNumber(captureRegion.y) || !_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height))
-        throw new Error("captureRegion must be specified and in format { x, y, width, height }");
+        if (!captureRegion || !_.isNumber(captureRegion.x) || !_.isNumber(captureRegion.y) || !_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height))
+            throw new Error("captureRegion must be specified and in format { x, y, width, height }");
 
-    if (!speakers || !_.isArray(speakers))
-        throw new Error("speakers must be specified and in format [device_id_1, device_id_2]");
+        if (!speakers || !_.isArray(speakers))
+            throw new Error("speakers must be specified and in format [device_id_1, device_id_2]");
 
-    if (!microphones || !_.isArray(microphones))
-        throw new Error("microphones must be specified and in format [device_id_1, device_id_2]");
+        if (!microphones || !_.isArray(microphones))
+            throw new Error("microphones must be specified and in format [device_id_1, device_id_2]");
 
-    if (microphones.length + speakers.length > 4)
-        throw new Error("Only capturing up to 4 simultaneous audio recording devices are supported at one time");
+        if (microphones.length + speakers.length > 4)
+            throw new Error("Only capturing up to 4 simultaneous audio recording devices are supported at one time");
 
-    if (!_.isNumber(fps) || fps < 1)
-        throw new Error("fps must be specified and > 0");
+        if (!_.isNumber(fps) || fps < 1)
+            throw new Error("fps must be specified and > 0");
 
-    console.log('OBS Start recording...');
+        console.log('OBS Start recording...');
 
-    osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
-    osnset.setSetting("Video", "Untitled", "FPSCommon", fps);
-    osnset.setSetting("Output", "Recording", "RecFormat", "mkv");
-    // osnset.setSetting("Output", "Streaming", "Bitrate", 10000);
+        osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
+        osnset.setSetting("Video", "Untitled", "FPSInt", fps);
+        osnset.setSetting("Output", "Recording", "RecFormat", "mkv");
+        // osnset.setSetting("Output", "Streaming", "Bitrate", 10000);
 
-    const scene = osn.SceneFactory.create('clscene');
-    resources.push(scene);
+        const scene = osn.SceneFactory.create('clscene');
+        resources.push(scene);
 
-    osn.Global.setOutputSource(1, scene);
+        osn.Global.setOutputSource(1, scene);
 
-    const displays = screen();
+        const displays = screen();
 
-    // const desktop = {
-    //     l: _.minBy(displays, d => d.bounds.x).bounds.x,
-    //     t: _.minBy(displays, d => d.bounds.y).bounds.y,
-    //     r: _.maxBy(displays, d => d.bounds.x + d.bounds.width).bounds.width,
-    //     b: _.maxBy(displays, d => d.bounds.y + d.bounds.height).bounds.height,
-    // }
+        // const desktop = {
+        //     l: _.minBy(displays, d => d.bounds.x).bounds.x,
+        //     t: _.minBy(displays, d => d.bounds.y).bounds.y,
+        //     r: _.maxBy(displays, d => d.bounds.x + d.bounds.width).bounds.width,
+        //     b: _.maxBy(displays, d => d.bounds.y + d.bounds.height).bounds.height,
+        // }
 
-    // const canvasWidth = desktop.r - desktop.l;
-    // const canvasHeight = desktop.b - desktop.t;
+        // const canvasWidth = desktop.r - desktop.l;
+        // const canvasHeight = desktop.b - desktop.t;
 
-    // osnset.setSetting("Video", "Untitled", "Base", `${canvasWidth}x${canvasHeight}`);
-    osnset.setSetting("Video", "Untitled", "Base", `${captureRegion.width}x${captureRegion.height}`);
-    osnset.setSetting("Video", "Untitled", "Output", `${captureRegion.width}x${captureRegion.height}`);
+        // osnset.setSetting("Video", "Untitled", "Base", `${canvasWidth}x${canvasHeight}`);
+        osnset.setSetting("Video", "Untitled", "Base", `${captureRegion.width}x${captureRegion.height}`);
+        osnset.setSetting("Video", "Untitled", "Output", `${captureRegion.width}x${captureRegion.height}`);
 
-    let displayAdded = false;
+        let displayAdded = false;
 
-    for (let idx in displays) {
-        const bounds = displays[idx].bounds;
-        console.log(bounds);
-        console.log(captureRegion);
-        if (intersectRect(bounds, captureRegion)) {
-            const inputSettings = {
-                capture_cursor: captureCursor,
-                monitor: idx
+        for (let idx in displays) {
+            const bounds = displays[idx].bounds;
+            console.log(bounds);
+            console.log(captureRegion);
+            if (intersectRect(bounds, captureRegion)) {
+                const inputSettings = {
+                    capture_cursor: captureCursor,
+                    monitor: idx
+                }
+                const videoSource = osn.InputFactory.create("monitor_capture", `display_${idx}`, inputSettings);
+
+                const itemInfo = {
+                    name: `display_${idx}_item`,
+                    crop: {
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0
+                    },
+                    scaleX: 1,
+                    scaleY: 1,
+                    visible: true,
+                    x: bounds.x - captureRegion.x,
+                    y: bounds.y - captureRegion.y,
+                    rotation: 0
+                }
+
+                const sceneItem = scene.add(videoSource, itemInfo);
+                resources.push(videoSource);
+                resources.push(sceneItem);
+
+                displayAdded = true;
             }
-            const videoSource = osn.InputFactory.create("monitor_capture", `display_${idx}`, inputSettings);
-
-            const itemInfo = {
-                name: `display_${idx}_item`,
-                crop: {
-                    left: 0,
-                    top: 0,
-                    right: 0,
-                    bottom: 0
-                },
-                scaleX: 1,
-                scaleY: 1,
-                visible: true,
-                x: bounds.x - captureRegion.x,
-                y: bounds.y - captureRegion.y,
-                rotation: 0
-            }
-
-            const sceneItem = scene.add(videoSource, itemInfo);
-            resources.push(videoSource);
-            resources.push(sceneItem);
-
-            displayAdded = true;
         }
-    }
 
-    if (!displayAdded) {
+        if (!displayAdded) {
+            throw new Error("No display in capture bounds");
+        }
+
+        osnset.setSetting("Output", "Audio - Track 1", "Track1Name", "Mixed: all sources");
+        // setSetting('Output', 'Track1Name', 'Mixed: all sources');
+        let currentTrack = 2;
+
+        for (const did of speakers) {
+            const source = osn.InputFactory.create('wasapi_output_capture', 'desktop-audio', { device_id: did });
+            osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
+            source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
+            osn.Global.setOutputSource(currentTrack, source);
+            currentTrack++;
+        }
+
+        for (const did of microphones) {
+            const source = osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: did });
+            osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
+            source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
+            osn.Global.setOutputSource(currentTrack, source);
+            currentTrack++;
+        }
+
+        osnset.setSetting('Output', "Recording", 'RecTracks', parseInt('1'.repeat(currentTrack - 1), 2)); // Bit mask of used tracks: 1111 to use first four (from available six)
+
+        osn.NodeObs.OBS_service_startRecording();
+
+        const sig = await getNextSignalInfo(s => s.signal === "start");
+        if (!!sig.error || sig.code > 0)
+            throw new Error(`Recieved signal error '${sig.signal}' code ${sig.code}: ${sig.error}`);
+
+        // TODO ADD SIGNAL
+        recording = true;
+        console.log('OBS Start recording... Complete');
+    } catch (e) {
         freeResources();
-        throw new Error("No display in capture bounds");
+        recording = false;
+        throw e;
     }
-
-    osnset.setSetting("Output", "Audio - Track 1", "Track1Name", "Mixed: all sources");
-    // setSetting('Output', 'Track1Name', 'Mixed: all sources');
-    let currentTrack = 2;
-
-    for (const did of speakers) {
-        const source = osn.InputFactory.create('wasapi_output_capture', 'desktop-audio', { device_id: did });
-        osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
-        source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
-        osn.Global.setOutputSource(currentTrack, source);
-        currentTrack++;
-    }
-
-    for (const did of microphones) {
-        const source = osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: did });
-        osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
-        source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
-        osn.Global.setOutputSource(currentTrack, source);
-        currentTrack++;
-    }
-
-    osnset.setSetting('Output', "Recording", 'RecTracks', parseInt('1'.repeat(currentTrack - 1), 2)); // Bit mask of used tracks: 1111 to use first four (from available six)
-
-    osn.NodeObs.OBS_service_startRecording();
-
-    // TODO ADD SIGNAL
-    recording = true;
-    console.log('OBS Start recording... Complete');
 }
 
-function recordingStop() {
+async function recordingStop() {
     if (!recording) {
         return;
     }
 
     console.log('OBS Stop recording...');
     osn.NodeObs.OBS_service_stopRecording();
+
+    const sig = await getNextSignalInfo(s => s.signal === "stop");
+    if (!!sig.error || sig.code > 0)
+        throw new Error(`Recieved signal error '${sig.signal}' code ${sig.code}: ${sig.error}`);
 
     // TODO ADD SIGNAL
     recording = false;

@@ -35,6 +35,8 @@ function setValue(data, subCategory, parameter, value) {
 
             parobj.currentValue = options[oidx];
             break;
+        case "OBS_PROPERTY_UINT":
+        case "OBS_PROPERTY_BITMASK":
         case "OBS_PROPERTY_INT":
             if (!_.isNumber(value))
                 throw new Error(`Invalid settings value: '${value}' must be a number`);
@@ -76,7 +78,7 @@ function getSettingsCategory(category, small) {
 
 function updateSettingsCategory(category, update) {
     const data = getData(category);
-        for (const subcat in update) {
+    for (const subcat in update) {
         var subobj = update[subcat];
         for (const sparam in subobj) {
             const value = subobj[sparam];

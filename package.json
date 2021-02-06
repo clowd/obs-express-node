@@ -20,6 +20,7 @@
         "express": "^4.17.1",
         "lodash": "^4.17.20",
         "obs-studio-node": "^0.10.10",
+        "rxjs": "^6.6.3",
         "uuid": "^8.3.2"
     },
     "devDependencies": {

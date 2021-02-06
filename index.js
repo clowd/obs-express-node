@@ -42,9 +42,17 @@ function shutdown(code) {
 
 app.use(bodyParser.json({ extended: true }));
 
+app.use(function (req, res, next) {
+    res.setHeader('Content-Type', 'application/json');
+    next();
+});
+
+function OK(res) {
+    res.status(200).send(JSON.stringify({ status: "ok" }));
+}
+
 // routes
 app.get("/", (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
     var routes = _(app._router.stack)
         .filter(s => !_.isEmpty(s.route))
         .map(s => ({ route: s.route.path, methods: s.route.methods }))
@@ -53,7 +61,6 @@ app.get("/", (req, res) => {
 });
 
 app.get("/status", (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({
         initialized: obs.isInitialized(),
         recording: obs.isRecording(),
@@ -67,27 +74,33 @@ app.get("/settings/:settingKey", (req, res) => {
         small = false;
     }
 
-    res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(obs.getSettingsCategory(req.params.settingKey, small)));
 });
 
 app.post("/settings/:settingKey", (req, res) => {
     obs.updateSettingsCategory(req.params.settingKey, req.body);
-    res.status(200).send('OK');
+    OK(res);
 });
 
-app.post("/recording/start", (req, res) => {
-    obs.recordingStart(req.body);
-    res.status(200).send('OK');
+app.post("/recording/start", (req, res, next) => {
+    obs.recordingStart(req.body).then(s => OK(res)).catch(next);
 });
 
-app.post("/recording/stop", (req, res) => {
-    obs.recordingStop();
-    res.status(200).send('OK');
+app.post("/recording/stop", (req, res, next) => {
+    obs.recordingStop().then(s => OK(res)).catch(next);
 });
 
 app.post("/shutdown", (req, res) => {
     shutdown(0);
+})
+
+app.use(function (err, req, res, next) {
+    console.error(err.stack)
+    if (!!err.message) {
+        res.status(500).send(JSON.stringify({ status: "error", message: err.message /*, stack: err.stack*/ }));
+    } else {
+        res.status(500).send(JSON.stringify({ status: "error", message: err }));
+    }
 })
 
 // startup
