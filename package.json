@@ -13,7 +13,7 @@
         "build:copy": "node build/copy.js"
     },
     "author": "caesay",
-    "license": "GPLv2",
+    "license": "GPL-2.0",
     "dependencies": {
         "body-parser": "^1.19.0",
         "electron-screen": "^1.0.3",
