@@ -29,8 +29,9 @@ jobs:
       with:
         files: "bin/"
         recursive: true
-        dest: "artifacts.zip"
+        dest: "obs-express.zip"
     - name: Upload build artifact
       uses: actions/upload-artifact@v2.2.2
       with: 
-        path: "artifacts.zip"
+        name: "obs-express.zip"
+        path: "obs-express.zip"
