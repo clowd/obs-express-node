@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+global.ISPKG = true;
+require('../index.js');

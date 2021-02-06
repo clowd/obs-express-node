@@ -1,18 +1,30 @@
 {
     "name": "obs-express",
-    "version": "1.0.0",
-    "description": "",
+    "version": "0.0.1",
+    "description": "Host and control libobs via an express http server",
     "main": "index.js",
     "private": true,
     "scripts": {
-        "start": "node index.js"
+        "start": "npm run clean && node index.js",
+        "kill": "taskkill /IM obs64.exe /F",
+        "clean": "npm run kill & node build/clean.js",
+        "build": "npm run clean && npm run build:pkg && npm run build:copy",
+        "build:pkg": "pkg build/entry --targets node10-windows-x64 --output \"./bin/obs-express.exe\"",
+        "build:copy": "node build/copy.js"
     },
-    "author": "",
-    "license": "ISC",
+    "author": "caesay",
+    "license": "GPLv2",
     "dependencies": {
+        "body-parser": "^1.19.0",
+        "electron-screen": "^1.0.3",
         "express": "^4.17.1",
         "lodash": "^4.17.20",
         "obs-studio-node": "^0.10.10",
         "uuid": "^8.3.2"
+    },
+    "devDependencies": {
+        "copy": "^0.3.2",
+        "nodemon": "^2.0.7",
+        "pkg": "^4.4.9"
     }
 }
