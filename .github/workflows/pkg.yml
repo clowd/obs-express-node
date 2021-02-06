@@ -33,5 +33,5 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v2.2.2
       with: 
-        name: "obs-express.zip"
+        name: "obs-express"
         path: "obs-express.zip"
