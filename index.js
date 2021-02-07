@@ -68,6 +68,14 @@ app.get("/status", (req, res) => {
     }));
 });
 
+app.get("/audio/speakers", (req, res) => {
+    res.send(JSON.stringify(obs.getSpeakers()));
+});
+
+app.get("/audio/microphones", (req, res) => {
+    res.send(JSON.stringify(obs.getMicrophones()));
+});
+
 app.get("/settings/:settingKey", (req, res) => {
     let small = true;
     if (_.isString(req.query.detailed) && req.query.detailed.toLowerCase() === "true") {
