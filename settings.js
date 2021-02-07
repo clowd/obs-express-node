@@ -15,11 +15,11 @@ function setData(category, data) {
 }
 
 function setValue(data, subCategory, parameter, value) {
-    var subobj = _.find(data, d => d.nameSubCategory.toUpperCase() === subCategory.toUpperCase());
+    const subobj = _.find(data, d => d.nameSubCategory.toUpperCase() === subCategory.toUpperCase());
     if (_.isEmpty(subobj) || _.isEmpty(subobj.parameters))
         throw new Error(`Invalid settings sub-category: '${subCategory}' not found`);
 
-    var parobj = _.find(subobj.parameters, p => p.name.toUpperCase() === parameter.toUpperCase());
+        const parobj = _.find(subobj.parameters, p => p.name.toUpperCase() === parameter.toUpperCase());
     if (_.isEmpty(parobj))
         throw new Error(`Invalid settings parameter: '${parameter}' not found`);
 
@@ -79,7 +79,7 @@ function getSettingsCategory(category, small) {
 function updateSettingsCategory(category, update) {
     const data = getData(category);
     for (const subcat in update) {
-        var subobj = update[subcat];
+        const subobj = update[subcat];
         for (const sparam in subobj) {
             const value = subobj[sparam];
             setValue(data, subcat, sparam, value);

@@ -309,7 +309,7 @@ function assertInitialized() {
 function freeResources() {
     const res = resources;
     resources = [];
-    for (var r in res) {
+    for (const r in res) {
         if (_.isFunction(r.release)) {
             r.release();
         }

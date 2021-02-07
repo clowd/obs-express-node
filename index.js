@@ -10,7 +10,7 @@ let server;
 
 // handle sigint/shutdown
 if (process.platform === "win32") {
-    var rl = require("readline").createInterface({
+    const rl = require("readline").createInterface({
         input: process.stdin,
         output: process.stdout
     });
@@ -53,7 +53,7 @@ function OK(res) {
 
 // routes
 app.get("/", (req, res) => {
-    var routes = _(app._router.stack)
+    const routes = _(app._router.stack)
         .filter(s => !_.isEmpty(s.route))
         .map(s => ({ route: s.route.path, methods: s.route.methods }))
         .toArray();
@@ -73,7 +73,6 @@ app.get("/settings/:settingKey", (req, res) => {
     if (_.isString(req.query.detailed) && req.query.detailed.toLowerCase() === "true") {
         small = false;
     }
-
     res.send(JSON.stringify(obs.getSettingsCategory(req.params.settingKey, small)));
 });
 
