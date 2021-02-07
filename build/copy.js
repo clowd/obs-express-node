@@ -1,6 +1,5 @@
 var copy = require('copy');
 var _ = require('lodash');
-const fs = require('fs');
 const path = require('path');
 
 function cb(err, files) {
