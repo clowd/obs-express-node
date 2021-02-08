@@ -88,6 +88,20 @@ function updateSettingsCategory(category, update) {
     setData(category, data);
 }
 
+function getAvailableValues(category, subCategory, parameter) {
+    const data = getData(category);
+    const subobj = _.find(data, d => d.nameSubCategory.toUpperCase() === subCategory.toUpperCase());
+    if (_.isEmpty(subobj) || _.isEmpty(subobj.parameters))
+        throw new Error(`Invalid settings sub-category: '${subCategory}' not found`);
+
+    const parobj = _.find(subobj.parameters, p => p.name.toUpperCase() === parameter.toUpperCase());
+    if (_.isEmpty(parobj))
+        throw new Error(`Invalid settings parameter: '${parameter}' not found`);
+
+    return _.map(parobj.values, p => _.values(p)[0]);
+}
+
+exports.getAvailableValues = getAvailableValues;
 exports.setSetting = setSetting;
 exports.getSettingsCategory = getSettingsCategory;
 exports.updateSettingsCategory = updateSettingsCategory;
