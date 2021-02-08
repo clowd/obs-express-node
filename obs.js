@@ -162,8 +162,8 @@ async function recordingStart(setup) {
             throw new Error("maxOutputSize must be specified and in format { width, height }");
         speakers = validate(false, speakers, _.isArray, [], "speakers must be an array of strings");
         microphones = validate(false, microphones, _.isArray, [], "microphones must be an array of strings");
-        fps = validate(false, fps, v => _.isNumber(v) && v > 0, 30, "fps must be a number and > 0");
-        cq = validate(false, cq, v => _.isNumber(v) && v > 0, 29, "cq must be a number and > 0");
+        fps = validate(false, fps, v => _.isNumber(v) && v > 0 && v <= 120, 30, "fps must be a number and between 1-120 inclusive");
+        cq = validate(false, cq, v => _.isNumber(v) && v > 0 && v <= 51, 29, "cq must be a number and between 1-51 inclusive");
         hardwareAccelerated = validate(false, hardwareAccelerated, _.isBoolean, false, "hardwareAccelerated must be a boolean");
         outputDirectory = validate(true, outputDirectory, _.isString, null, "outputDirectory must be a path");
         performanceMode = validate(false, performanceMode, _.isString, "medium", "performanceMode must be a string");
@@ -174,7 +174,7 @@ async function recordingStart(setup) {
         if (_.indexOf(["slow", "medium", "fast"], performanceMode) < 0)
             throw new Error("performanceMode must be one of [slow, medium, fast]");
 
-        if (_.indexOf(["yuv420", "yuv444", "fast"], subsamplingMode) < 0)
+        if (_.indexOf(["yuv420", "yuv444"], subsamplingMode) < 0)
             throw new Error("subsamplingMode must be one of [yuv420, yuv444]");
 
         if (!fs.existsSync(outputDirectory))
