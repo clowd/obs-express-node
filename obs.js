@@ -74,38 +74,8 @@ function init() {
 
     osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
     osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
-    console.log("Starting OBS... Complete");
 
-
-
-    // console.log("Configuring OBS Default Settings...");
-
-    // console.log(JSON.stringify(osnset.getSettingsCategory("Video", false)));
-
-    // set to advanced ahead of time - this changes the settings that are available
-    // osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
-    // osnset.setSetting("Output", "Recording", "RecFormat", "mkv");
-    // osnset.setSetting("Output", "Streaming", "Bitrate", 10000);
-    // osnset.setSetting("Video", "Untitled", "FPSCommon", "60");
-
-    // osnset.setSetting("Video", "Untitled", "Base", "3440x1440");
-    // osnset.setSetting("Video", "Untitled", "Output", "3440x1440");
-
-    // osnset.setSetting("Advanced", "Video", "ColorFormat", "I444");
-    // osnset.setSetting("Advanced", "Video", "ColorSpace", "709");
-    // osnset.setSetting("Advanced", "Video", "ColorRange", "Full");
-
-    // osnset.setSetting("Output", "Recording", "RecEncoder", "ffmpeg_nvenc");
-    //ffmpeg_nvenc
-    // const availableEncoders = getAvailableValues('Output', 'Recording', 'RecEncoder');
-    // setSetting('Output', 'RecEncoder', availableEncoders.slice(-1)[0] || 'x264');
-    // setSetting('Output', 'RecFilePath', path.join(__dirname, 'videos'));
-    // setSetting('Output', 'RecFormat', 'mkv');
-    // setSetting('Output', 'VBitrate', 10000); // 10 Mbps
-    // setSetting('Video', 'FPSCommon', 60);
-
-    // console.log("Configuring OBS Default Settings... Complete");
-    console.log("OBS Ready");
+    console.log("Starting OBS... Ready");
 }
 
 async function release() {
@@ -152,53 +122,142 @@ function intersectRect(r1, r2) {
     else return false;
 }
 
+function validate(required, value, valfn, defaultval, help) {
+    const isValid = valfn(value);
+    if (isValid)
+        return value;
+
+    if (value === undefined && !!defaultval && !required)
+        return defaultval;
+
+    throw new Error(!!help ? help : "Value was invalid");
+}
+
 async function recordingStart(setup) {
     assertInitialized();
     if (recording) { return; }
 
     try {
-        const { captureRegion, captureCursor, speakers, microphones, fps } = setup;
+        let {
+            captureRegion,
+            speakers,
+            microphones,
+            fps,
+            cq,
+            maxOutputSize,
+            hardwareAccelerated,
+            outputDirectory,
+            performanceMode,
+            subsamplingMode,
+            ...other
+        } = setup;
 
+        // PARSE INPUT
+        // =============================
+        if (!_.isEmpty(other))
+            throw new Error("Unknown setup parameters: " + JSON.stringify(other));
         if (!captureRegion || !_.isNumber(captureRegion.x) || !_.isNumber(captureRegion.y) || !_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height))
             throw new Error("captureRegion must be specified and in format { x, y, width, height }");
+        if (!!maxOutputSize && (!_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height)))
+            throw new Error("maxOutputSize must be specified and in format { width, height }");
+        speakers = validate(false, speakers, _.isArray, [], "speakers must be an array of strings");
+        microphones = validate(false, microphones, _.isArray, [], "microphones must be an array of strings");
+        fps = validate(false, fps, v => _.isNumber(v) && v > 0, 30, "fps must be a number and > 0");
+        cq = validate(false, cq, v => _.isNumber(v) && v > 0, 29, "cq must be a number and > 0");
+        hardwareAccelerated = validate(false, hardwareAccelerated, _.isBoolean, false, "hardwareAccelerated must be a boolean");
+        outputDirectory = validate(true, outputDirectory, _.isString, null, "outputDirectory must be a path");
+        performanceMode = validate(false, performanceMode, _.isString, "medium", "performanceMode must be a string");
+        subsamplingMode = validate(false, subsamplingMode, _.isString, "yuv420", "subsamplingMode must be a string");
+        performanceMode = performanceMode.toLowerCase();
+        subsamplingMode = subsamplingMode.toLowerCase();
 
-        if (!speakers || !_.isArray(speakers))
-            throw new Error("speakers must be specified and in format [device_id_1, device_id_2]");
+        if (_.indexOf(["slow", "medium", "fast"], performanceMode) < 0)
+            throw new Error("performanceMode must be one of [slow, medium, fast]");
 
-        if (!microphones || !_.isArray(microphones))
-            throw new Error("microphones must be specified and in format [device_id_1, device_id_2]");
+        if (_.indexOf(["yuv420", "yuv444", "fast"], subsamplingMode) < 0)
+            throw new Error("subsamplingMode must be one of [yuv420, yuv444]");
 
-        if (microphones.length + speakers.length > 4)
-            throw new Error("Only capturing up to 4 simultaneous audio recording devices are supported at one time");
+        if (!fs.existsSync(outputDirectory))
+            throw new Error("outputDirectory directory must exist");
 
-        if (!_.isNumber(fps) || fps < 1)
-            throw new Error("fps must be specified and > 0");
 
-        console.log('OBS Start recording...');
-
+        // GENERAL SETTINGS
+        // =============================
         osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
+        osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
         osnset.setSetting("Video", "Untitled", "FPSInt", fps);
         osnset.setSetting("Output", "Recording", "RecFormat", "mkv");
-        // osnset.setSetting("Output", "Streaming", "Bitrate", 10000);
+        osnset.setSetting("Output", "Recording", "RecFilePath", outputDirectory);
 
+
+        // CONFIGURE ENCODER
+        // =============================
+        // subsamplingMode
+        let selectedEncoder = "obs_x264";
+        if (hardwareAccelerated) {
+            // [ 'none', 'obs_x264', 'ffmpeg_nvenc', 'jim_nvenc' ]
+            const availableEncoders = osnset.getAvailableValues("Output", "Recording", "RecEncoder");
+            if (_.indexOf(availableEncoders, "jim_nvenc") >= 0) {
+                selectedEncoder = "jim_nvenc";
+            }
+        }
+
+        switch (selectedEncoder) {
+            case "obs_x264":
+                osnset.setSetting("Output", "Recording", "RecEncoder", selectedEncoder);
+                osnset.setSetting("Output", "Recording", "Recrate_control", "CRF");
+                osnset.setSetting("Output", "Recording", "Reccrf", cq);
+                osnset.setSetting("Output", "Recording", "Recprofile", "high");
+                switch (performanceMode) {
+                    case "slow":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "slow");
+                        osnset.setSetting("Output", "Recording", "Rectune", "psnr");
+                        break;
+                    case "medium":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "medium");
+                        osnset.setSetting("Output", "Recording", "Rectune", "zerolatency");
+                        break;
+                    case "fast":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "veryfast");
+                        osnset.setSetting("Output", "Recording", "Rectune", "zerolatency");
+                        break;
+                }
+                break;
+            case "jim_nvenc":
+                osnset.setSetting("Output", "Recording", "RecEncoder", selectedEncoder);
+                osnset.setSetting("Output", "Recording", "Recrate_control", "CQP");
+                osnset.setSetting("Output", "Recording", "Reccqp", cq);
+                osnset.setSetting("Output", "Recording", "Recprofile", "high");
+                switch (performanceMode) {
+                    case "slow":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "mq");
+                        osnset.setSetting("Output", "Recording", "Reclookahead", true);
+                        break;
+                    case "medium":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "default");
+                        osnset.setSetting("Output", "Recording", "Reclookahead", false);
+                        break;
+                    case "fast":
+                        osnset.setSetting("Output", "Recording", "Recpreset", "llhq");
+                        osnset.setSetting("Output", "Recording", "Reclookahead", false);
+                        break;
+                }
+                break;
+            default:
+                throw new Error(`Encoder '${selectedEncoder}' is not supported.`);
+        }
+
+        // CREATE SCENE
+        // =============================
         const scene = osn.SceneFactory.create('clscene');
         resources.push(scene);
-
         osn.Global.setOutputSource(1, scene);
 
+
+        // CONFIGURE DISPLAYS
+        // =============================
+        // maxOutputSize
         const displays = screen();
-
-        // const desktop = {
-        //     l: _.minBy(displays, d => d.bounds.x).bounds.x,
-        //     t: _.minBy(displays, d => d.bounds.y).bounds.y,
-        //     r: _.maxBy(displays, d => d.bounds.x + d.bounds.width).bounds.width,
-        //     b: _.maxBy(displays, d => d.bounds.y + d.bounds.height).bounds.height,
-        // }
-
-        // const canvasWidth = desktop.r - desktop.l;
-        // const canvasHeight = desktop.b - desktop.t;
-
-        // osnset.setSetting("Video", "Untitled", "Base", `${canvasWidth}x${canvasHeight}`);
         osnset.setSetting("Video", "Untitled", "Base", `${captureRegion.width}x${captureRegion.height}`);
         osnset.setSetting("Video", "Untitled", "Output", `${captureRegion.width}x${captureRegion.height}`);
 
@@ -210,10 +269,11 @@ async function recordingStart(setup) {
             console.log(captureRegion);
             if (intersectRect(bounds, captureRegion)) {
                 const inputSettings = {
-                    capture_cursor: captureCursor,
+                    capture_cursor: true,
                     monitor: idx
                 }
                 const videoSource = osn.InputFactory.create("monitor_capture", `display_${idx}`, inputSettings);
+                resources.push(videoSource);
 
                 const itemInfo = {
                     name: `display_${idx}_item`,
@@ -232,9 +292,7 @@ async function recordingStart(setup) {
                 }
 
                 const sceneItem = scene.add(videoSource, itemInfo);
-                resources.push(videoSource);
                 resources.push(sceneItem);
-
                 displayAdded = true;
             }
         }
@@ -243,12 +301,15 @@ async function recordingStart(setup) {
             throw new Error("No display in capture bounds");
         }
 
+
+        // ADD AUDIO DEVICES
+        // =============================
         osnset.setSetting("Output", "Audio - Track 1", "Track1Name", "Mixed: all sources");
-        // setSetting('Output', 'Track1Name', 'Mixed: all sources');
         let currentTrack = 2;
 
         for (const did of speakers) {
             const source = osn.InputFactory.create('wasapi_output_capture', 'desktop-audio', { device_id: did });
+            resources.push(source);
             osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
             source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
             osn.Global.setOutputSource(currentTrack, source);
@@ -257,14 +318,22 @@ async function recordingStart(setup) {
 
         for (const did of microphones) {
             const source = osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: did });
+            resources.push(source);
             osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
             source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
             osn.Global.setOutputSource(currentTrack, source);
             currentTrack++;
         }
 
+        if (currentTrack >= 6)
+            throw new Error("Only 5 simultaneous audio devices at one time are supported");
+
         osnset.setSetting('Output', "Recording", 'RecTracks', parseInt('1'.repeat(currentTrack - 1), 2)); // Bit mask of used tracks: 1111 to use first four (from available six)
 
+
+        // START RECORDING
+        // =============================
+        console.log('OBS Start recording...');
         osn.NodeObs.OBS_service_startRecording();
 
         const sig = await getNextSignalInfo(s => s.signal === "start");
