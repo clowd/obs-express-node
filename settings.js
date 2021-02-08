@@ -19,7 +19,7 @@ function setValue(data, subCategory, parameter, value) {
     if (_.isEmpty(subobj) || _.isEmpty(subobj.parameters))
         throw new Error(`Invalid settings sub-category: '${subCategory}' not found`);
 
-        const parobj = _.find(subobj.parameters, p => p.name.toUpperCase() === parameter.toUpperCase());
+    const parobj = _.find(subobj.parameters, p => p.name.toUpperCase() === parameter.toUpperCase());
     if (_.isEmpty(parobj))
         throw new Error(`Invalid settings parameter: '${parameter}' not found`);
 
@@ -69,8 +69,8 @@ function getSettingsCategory(category, small) {
     const data = getData(category);
     if (small) {
         return _(data).keyBy("nameSubCategory").mapValues(v =>
-            _(v.parameters).keyBy("name").mapValues(x => x.currentValue)
-        );
+            _(v.parameters).keyBy("name").mapValues(x => x.currentValue).value()
+        ).value();
     } else {
         return data;
     }
