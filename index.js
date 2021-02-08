@@ -47,8 +47,13 @@ app.use(function (req, res, next) {
     next();
 });
 
-function OK(res) {
+function DO_OK(res) {
     res.status(200).send(JSON.stringify({ status: "ok" }));
+}
+
+function DO_JSON(res, body) {
+    var obj = Object.assign({}, { status: "ok" }, body);
+    res.status(200).send(JSON.stringify(obj));
 }
 
 // routes
@@ -57,23 +62,23 @@ app.get("/", (req, res) => {
         .filter(s => !_.isEmpty(s.route))
         .map(s => ({ route: s.route.path, methods: s.route.methods }))
         .toArray();
-    res.send(JSON.stringify(routes));
+    DO_JSON(res, routes);
 });
 
 app.get("/status", (req, res) => {
-    res.send(JSON.stringify({
+    DO_JSON(res, {
         initialized: obs.isInitialized(),
         recording: obs.isRecording(),
         statistics: obs.getStatistics(),
-    }));
+    });
 });
 
 app.get("/audio/speakers", (req, res) => {
-    res.send(JSON.stringify(obs.getSpeakers()));
+    DO_JSON(res, obs.getSpeakers());
 });
 
 app.get("/audio/microphones", (req, res) => {
-    res.send(JSON.stringify(obs.getMicrophones()));
+    DO_JSON(res, obs.getMicrophones());
 });
 
 app.get("/settings/:settingKey", (req, res) => {
@@ -81,20 +86,20 @@ app.get("/settings/:settingKey", (req, res) => {
     if (_.isString(req.query.detailed) && req.query.detailed.toLowerCase() === "true") {
         small = false;
     }
-    res.send(JSON.stringify(obs.getSettingsCategory(req.params.settingKey, small)));
+    DO_JSON(res, obs.getSettingsCategory(req.params.settingKey, small));
 });
 
 app.post("/settings/:settingKey", (req, res) => {
     obs.updateSettingsCategory(req.params.settingKey, req.body);
-    OK(res);
+    DO_OK(res);
 });
 
 app.post("/recording/start", (req, res, next) => {
-    obs.recordingStart(req.body).then(s => OK(res)).catch(next);
+    obs.recordingStart(req.body).then(s => DO_OK(res)).catch(next);
 });
 
 app.post("/recording/stop", (req, res, next) => {
-    obs.recordingStop().then(s => OK(res)).catch(next);
+    obs.recordingStop().then(s => DO_OK(res)).catch(next);
 });
 
 app.post("/shutdown", (req, res) => {
@@ -113,7 +118,7 @@ app.use(function (err, req, res, next) {
 // startup
 try {
     obs.init();
-    server = app.listen(port, () => {
+    server = app.listen(port, "localhost", () => {
         console.log(`Listening at http://localhost:${port}`);
     });
 } catch (e) {
