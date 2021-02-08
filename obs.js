@@ -40,7 +40,7 @@ const signals = new Subject();
 function getNextSignalInfo(predicate) {
     return new Promise((resolve, reject) => {
         signals.pipe(first(predicate)).subscribe(signalInfo => resolve(signalInfo));
-        setTimeout(() => reject('Signal wait timeout'), 6000);
+        setTimeout(() => reject('Signal wait timeout'), 10000);
     });
 }
 
