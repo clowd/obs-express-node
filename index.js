@@ -52,8 +52,7 @@ function DO_OK(res) {
 }
 
 function DO_JSON(res, body) {
-    var obj = Object.assign({}, { status: "ok" }, body);
-    res.status(200).send(JSON.stringify(obj));
+    res.status(200).send(JSON.stringify(body));
 }
 
 // routes
