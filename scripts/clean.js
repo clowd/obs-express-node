@@ -29,4 +29,5 @@ function del(d) {
 
 console.log("Cleaning runtime artifacts:")
 del("../bin");
+del("../build");
 del("../obs-data");

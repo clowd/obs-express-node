@@ -13,5 +13,5 @@ function cb(err, files) {
 
 copy(path.join(__dirname, '../node_modules/obs-studio-node/**/*[!pdb]'), path.join(__dirname, '../bin/lib'), cb);
 copy(path.join(__dirname, '../node_modules/obs-studio-node/**/*.node'), path.join(__dirname, '../bin'), cb);
-copy(path.join(__dirname, '../node_modules/electron-screen/build/Release/**/*.node'), path.join(__dirname, '../bin'), cb);
+copy(path.join(__dirname, '../build/Release/**/*.node'), path.join(__dirname, '../bin'), cb);
 copy(path.join(__dirname, '../package.json'), path.join(__dirname, '../bin'), cb);

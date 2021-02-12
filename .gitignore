@@ -118,3 +118,4 @@ dist
 osn-data/
 obs-data/
 bin/
+build/

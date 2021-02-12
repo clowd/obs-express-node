@@ -4,9 +4,9 @@ const osn = require("obs-studio-node");
 const { v4: uuid } = require('uuid');
 const osnset = require("./settings");
 const fs = require("fs");
-const screen = require('electron-screen');
 const { Subject } = require("rxjs");
 const { first } = require('rxjs/operators');
+const screen = require('bindings')('getscreens').getInfo;
 
 let initialized = false;
 let recording = false;
@@ -263,20 +263,22 @@ async function recordingStart(setup) {
 
         let displayAdded = false;
 
-        for (let idx in displays) {
-            const bounds = displays[idx].bounds;
-            console.log(bounds);
-            console.log(captureRegion);
+        console.log("Capture region: " + JSON.stringify(captureRegion));
+
+        for (let display of displays) {
+            const { bounds, dpi, index } = display;
+            console.log(`Checking display ${index}, dpi:${dpi}, bounds:` + JSON.stringify(bounds));
+
             if (intersectRect(bounds, captureRegion)) {
                 const inputSettings = {
                     capture_cursor: true,
-                    monitor: idx
+                    monitor: index,
                 }
-                const videoSource = osn.InputFactory.create("monitor_capture", `display_${idx}`, inputSettings);
+                const videoSource = osn.InputFactory.create("monitor_capture", `display_${index}`, inputSettings);
                 resources.push(videoSource);
 
                 const itemInfo = {
-                    name: `display_${idx}_item`,
+                    name: `display_${index}_item`,
                     crop: {
                         left: 0,
                         top: 0,
@@ -290,6 +292,8 @@ async function recordingStart(setup) {
                     y: bounds.y - captureRegion.y,
                     rotation: 0
                 }
+
+                console.log(`Display intersects capture! placing on scene at ${itemInfo.x},${itemInfo.y},${bounds.width},${bounds.height}`);
 
                 const sceneItem = scene.add(videoSource, itemInfo);
                 resources.push(sceneItem);
