@@ -149,6 +149,7 @@ async function recordingStart(setup) {
             outputDirectory,
             performanceMode,
             subsamplingMode,
+            containerFormat,
             ...other
         } = setup;
 
@@ -160,14 +161,16 @@ async function recordingStart(setup) {
             throw new Error("captureRegion must be specified and in format { x, y, width, height }");
         if (!!maxOutputSize && (!_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height)))
             throw new Error("maxOutputSize must be specified and in format { width, height }");
+
         speakers = validate(false, speakers, _.isArray, [], "speakers must be an array of strings");
         microphones = validate(false, microphones, _.isArray, [], "microphones must be an array of strings");
         fps = validate(false, fps, v => _.isNumber(v) && v > 0 && v <= 120, 30, "fps must be a number and between 1-120 inclusive");
-        cq = validate(false, cq, v => _.isNumber(v) && v > 0 && v <= 51, 29, "cq must be a number and between 1-51 inclusive");
+        cq = validate(false, cq, v => _.isNumber(v) && v > 0 && v <= 51, 24, "cq must be a number and between 1-51 inclusive");
         hardwareAccelerated = validate(false, hardwareAccelerated, _.isBoolean, false, "hardwareAccelerated must be a boolean");
         outputDirectory = validate(true, outputDirectory, _.isString, null, "outputDirectory must be a path");
         performanceMode = validate(false, performanceMode, _.isString, "medium", "performanceMode must be a string");
         subsamplingMode = validate(false, subsamplingMode, _.isString, "yuv420", "subsamplingMode must be a string");
+        containerFormat = validate(false, containerFormat, _.isString, "mp4", "containerFormat must be a string");
         performanceMode = performanceMode.toLowerCase();
         subsamplingMode = subsamplingMode.toLowerCase();
 
@@ -176,6 +179,9 @@ async function recordingStart(setup) {
 
         if (_.indexOf(["yuv420", "yuv444"], subsamplingMode) < 0)
             throw new Error("subsamplingMode must be one of [yuv420, yuv444]");
+
+        if (_.indexOf(["mkv", "mp4"], containerFormat) < 0)
+            throw new Error("containerFormat must be one of [mkv, mp4]");
 
         if (!fs.existsSync(outputDirectory))
             throw new Error("outputDirectory directory must exist");
@@ -186,7 +192,7 @@ async function recordingStart(setup) {
         osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
         osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
         osnset.setSetting("Video", "Untitled", "FPSInt", fps);
-        osnset.setSetting("Output", "Recording", "RecFormat", "mkv");
+        osnset.setSetting("Output", "Recording", "RecFormat", containerFormat);
         osnset.setSetting("Output", "Recording", "RecFilePath", outputDirectory);
 
 
