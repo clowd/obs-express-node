@@ -5,7 +5,7 @@
     "main": "index.js",
     "private": true,
     "scripts": {
-        "start": "npm run clean && npm run gyp && node index.js",
+        "start": "node index.js",
         "kill": "taskkill /F /IM obs-express.exe & taskkill /F /IM obs64.exe || ECHO.",
         "clean": "npm run kill & node scripts/clean.js",
         "build": "npm run clean && npm run gyp && npm run build:pkg && npm run build:copy",
