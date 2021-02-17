@@ -1,6 +1,6 @@
 const _ = require("lodash");
 const path = require("path");
-const osn = require("obs-studio-node");
+const osn = require("@streamlabs/obs-studio-node");
 const { v4: uuid } = require('uuid');
 const osnset = require("./settings");
 const fs = require("fs");
@@ -12,25 +12,33 @@ let initialized = false;
 let recording = false;
 let resources = [];
 
-let pathRoot, pathData, pathObs, pathObsExe;
+let pathRoot, pathObs, pathObsExe;
 
 const productionMode = !!global.ISPKG;
 if (productionMode) {
     console.log("Running in production mode");
     pathRoot = path.dirname(process.execPath);
-    pathData = path.join(pathRoot, "obs-data");
     pathObs = path.join(pathRoot, "lib");
     pathObsExe = path.join(pathObs, "obs64.exe");
 } else {
     console.log("Running in DEVELOPMENT mode");
     pathRoot = __dirname;
-    pathData = path.join(pathRoot, "obs-data");
-    pathObs = path.join(pathRoot, "node_modules", "obs-studio-node");
+    pathObs = path.join(pathRoot, "node_modules", "@streamlabs", "obs-studio-node");
     pathObsExe = path.join(pathObs, "obs64.exe");
 }
 
+const pathData = path.join(pathRoot, "obs-data");
+const pathObsBasicConfig = path.join(pathData, "basic.ini");
+
 if (!fs.existsSync(pathObsExe)) {
     console.log("obs-studio-node could not be found. Ensure it exists in ./lib for production or node_modules for dev.");
+}
+
+function rewriteBasicConfig() {
+    // streamlabs obs-studio-node likes to create invalid config files (which then causes OBS
+    // to fail to initialize). We try to handle that by writing our own.
+    console.log("Writing new config to: " + pathObsBasicConfig);
+    fs.writeFileSync(pathObsBasicConfig, "[Video]\nBaseCX=100\nBaseCY=100\nOutputCX=100\nOutputCY=100");
 }
 
 console.log("Root directory is: " + pathRoot);
@@ -54,6 +62,15 @@ function isInitialized() {
 
 function init() {
     console.log("Starting OBS...");
+
+    if (!fs.existsSync(pathData)) {
+        fs.mkdirSync(pathData);
+    }
+
+    if (!fs.existsSync(pathObsBasicConfig)) {
+        console.log("Basic settings do not exist; creating...");
+        rewriteBasicConfig();
+    }
 
     osn.NodeObs.IPC.setServerPath(pathObsExe, pathObs);
     osn.NodeObs.IPC.host("obs-express-" + uuid());

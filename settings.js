@@ -1,4 +1,4 @@
-const osn = require("obs-studio-node");
+const osn = require("@streamlabs/obs-studio-node");
 const _ = require("lodash");
 
 function getData(category) {
