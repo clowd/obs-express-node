@@ -66,8 +66,22 @@ function init() {
 
     const initResult = osn.NodeObs.OBS_API_initAPI('en-US', pathData, '1.0.0');
 
-    if (initResult !== 0) {
-        throw new Error("OBS Exited with error code: " + initResult);
+    if (initResult !== 0) { 
+        //See obs-studio-node/module.ts:EVideoCodes or obs-studio/obs-defs.h for C constants
+        switch (initResult) {
+            case -1: // Fail
+                throw new Error("Failed to initialize OBS API (EFail). OBS core is already disposed or has not been created.");
+            case -2: // NotSupported
+                throw new Error("Failed to initialize OBS API (NotSupported). Your video drivers may be out of date?");
+            case -3: // InvalidParam
+                throw new Error("Failed to initialize OBS API (InvalidParam). The incorrect internal parameters were sent to OBS during startup. This may be caused by an invalid OBS config, you can try deleting it at: " + pathObsBasicConfig);
+            case -4: // CurrentlyActive
+                throw new Error("Failed to initialize OBS API (CurrentlyActive). OBS is currently recording and video settings can not be changed.");
+            case -5: // ModuleNotFound
+                throw new Error("Failed to initialize OBS API (ModuleNotFound). DirectX or related drivers could not be found on your system. Your video drivers may be out of date?");
+            default:
+                throw new Error("An unknown error was encountered while initializing OBS (" + initResult + ")");
+        }
     }
 
     initialized = true;
