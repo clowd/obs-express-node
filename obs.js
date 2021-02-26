@@ -157,7 +157,7 @@ function validate(required, value, valfn, defaultval, help) {
     if (isValid)
         return value;
 
-    if (value === undefined && !!defaultval && !required)
+    if (value === undefined && defaultval !== undefined && !required)
         return defaultval;
 
     throw new Error(!!help ? help : "Value was invalid");
