@@ -174,7 +174,8 @@ async function recordingStart(setup) {
             microphones,
             fps,
             cq,
-            maxOutputSize,
+            maxOutputWidth,
+            maxOutputHeight,
             hardwareAccelerated,
             outputDirectory,
             performanceMode,
@@ -190,13 +191,13 @@ async function recordingStart(setup) {
 
         if (!captureRegion || !_.isNumber(captureRegion.x) || !_.isNumber(captureRegion.y) || !_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height))
             throw new Error("captureRegion must be specified and in format { x, y, width, height }");
-        if (!!maxOutputSize && (!_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height)))
-            throw new Error("maxOutputSize must be specified and in format { width, height }");
 
         speakers = validate(false, speakers, _.isArray, [], "speakers must be an array of strings");
         microphones = validate(false, microphones, _.isArray, [], "microphones must be an array of strings");
         fps = validate(false, fps, v => _.isNumber(v) && v > 0, 30, "fps must be a number > 0");
         cq = validate(false, cq, v => _.isNumber(v) && v > 0 && v <= 51, 24, "cq must be a number and between 1-51 inclusive");
+        maxOutputWidth = validate(false, maxOutputWidth, v => _.isNumber(v), 0, "maxOutputWidth must be a number");
+        maxOutputHeight = validate(false, maxOutputHeight, v => _.isNumber(v), 0, "maxOutputHeight must be a number");
         hardwareAccelerated = validate(false, hardwareAccelerated, _.isBoolean, false, "hardwareAccelerated must be a boolean");
         outputDirectory = validate(true, outputDirectory, _.isString, null, "outputDirectory must be a path");
         performanceMode = validate(false, performanceMode, _.isString, "medium", "performanceMode must be a string");
@@ -230,7 +231,18 @@ async function recordingStart(setup) {
 
         // CONFIGURE ENCODER
         // =============================
-        // subsamplingMode
+        if (subsamplingMode == "yuv420") {
+            // use 709 only if resolution > 720p
+            const cspace = captureRegion.width * captureRegion.height > 1280 * 720 ? "709" : "601";
+            osnset.setSetting("Advanced", "Video", "ColorFormat", "NV12");
+            osnset.setSetting("Advanced", "Video", "ColorSpace", cspace);
+            osnset.setSetting("Advanced", "Video", "ColorRange", "Partial");
+        } else {
+            osnset.setSetting("Advanced", "Video", "ColorFormat", "I444");
+            osnset.setSetting("Advanced", "Video", "ColorSpace", "709");
+            osnset.setSetting("Advanced", "Video", "ColorRange", "Full");
+        }
+
         let selectedEncoder = "obs_x264";
         if (hardwareAccelerated) {
             // [ 'none', 'obs_x264', 'ffmpeg_nvenc', 'jim_nvenc' ]
@@ -294,10 +306,30 @@ async function recordingStart(setup) {
 
         // CONFIGURE DISPLAYS
         // =============================
-        // maxOutputSize
         const displays = screen();
         osnset.setSetting("Video", "Untitled", "Base", `${captureRegion.width}x${captureRegion.height}`);
-        osnset.setSetting("Video", "Untitled", "Output", `${captureRegion.width}x${captureRegion.height}`);
+
+        const outputSize = { width: captureRegion.width, height: captureRegion.height };
+
+        if (maxOutputWidth > 0 && outputSize.width > maxOutputWidth) {
+            const waspect = outputSize.width / outputSize.height;
+            outputSize.width = maxOutputWidth;
+            outputSize.height = Math.round(maxOutputWidth / waspect);
+        }
+
+        if (maxOutputHeight > 0 && outputSize.height > maxOutputHeight) {
+            const haspect = outputSize.height / outputSize.width;
+            outputSize.width = Math.round(maxOutputHeight / haspect);
+            outputSize.height = maxOutputHeight;
+        }
+
+        const dnsclperc = Math.round((1 - ((outputSize.width * outputSize.height) / (captureRegion.width * captureRegion.height))) * 100);
+
+        if (dnsclperc > 0) {
+            console.log(`Downscaling from ${captureRegion.width}x${captureRegion.height} to ${outputSize.width}x${outputSize.height} (-${dnsclperc}%)`);
+        }
+
+        osnset.setSetting("Video", "Untitled", "Output", `${outputSize.width}x${outputSize.height}`);
 
         let displayAdded = false;
 
