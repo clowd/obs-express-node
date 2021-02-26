@@ -186,7 +186,8 @@ async function recordingStart(setup) {
         // PARSE INPUT
         // =============================
         if (!_.isEmpty(other))
-            throw new Error("Unknown setup parameters: " + JSON.stringify(other));
+            console.log("Ignored / unknown setup parameters: " + JSON.stringify(other));
+
         if (!captureRegion || !_.isNumber(captureRegion.x) || !_.isNumber(captureRegion.y) || !_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height))
             throw new Error("captureRegion must be specified and in format { x, y, width, height }");
         if (!!maxOutputSize && (!_.isNumber(captureRegion.width) || !_.isNumber(captureRegion.height)))
