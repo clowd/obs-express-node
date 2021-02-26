@@ -100,9 +100,9 @@ function init(connectId, workDir, dataDir) {
         }
     }
 
-    console.log("Reconfiguring required settings");
+    console.log("Reconfiguring helpful/static settings");
     osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
-    osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
+    osnset.setSetting("Video", "Untitled", "FPSType", "Fractional FPS Value");
 
     initialized = true;
     console.log("Started OBS successfully");
@@ -194,7 +194,7 @@ async function recordingStart(setup) {
 
         speakers = validate(false, speakers, _.isArray, [], "speakers must be an array of strings");
         microphones = validate(false, microphones, _.isArray, [], "microphones must be an array of strings");
-        fps = validate(false, fps, v => _.isNumber(v) && v > 0 && v <= 120, 30, "fps must be a number and between 1-120 inclusive");
+        fps = validate(false, fps, v => _.isNumber(v) && v > 0, 30, "fps must be a number > 0");
         cq = validate(false, cq, v => _.isNumber(v) && v > 0 && v <= 51, 24, "cq must be a number and between 1-51 inclusive");
         hardwareAccelerated = validate(false, hardwareAccelerated, _.isBoolean, false, "hardwareAccelerated must be a boolean");
         outputDirectory = validate(true, outputDirectory, _.isString, null, "outputDirectory must be a path");
@@ -220,8 +220,9 @@ async function recordingStart(setup) {
         // GENERAL SETTINGS
         // =============================
         osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
-        osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
-        osnset.setSetting("Video", "Untitled", "FPSInt", fps);
+        osnset.setSetting("Video", "Untitled", "FPSType", "Fractional FPS Value");
+        osnset.setSetting("Video", "Untitled", "FPSNum", fps);
+        osnset.setSetting("Video", "Untitled", "FPSDen", 1);
         osnset.setSetting("Output", "Recording", "RecFormat", containerFormat);
         osnset.setSetting("Output", "Recording", "RecFilePath", outputDirectory);
 
@@ -366,7 +367,7 @@ async function recordingStart(setup) {
         }
 
         if (currentTrack >= 6)
-            throw new Error("Only 5 simultaneous audio devices at one time are supported");
+            throw new Error("Only 5 simultaneous audio devices are supported");
 
         osnset.setSetting('Output', "Recording", 'RecTracks', parseInt('1'.repeat(currentTrack - 1), 2)); // Bit mask of used tracks: 1111 to use first four (from available six)
 
@@ -380,7 +381,6 @@ async function recordingStart(setup) {
         if (!!sig.error || sig.code > 0)
             throw new Error(`Recieved signal error '${sig.signal}' code ${sig.code}: ${sig.error}`);
 
-        // TODO ADD SIGNAL
         recording = true;
         console.log('OBS Start recording... Complete');
     } catch (e) {
