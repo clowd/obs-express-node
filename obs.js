@@ -12,38 +12,6 @@ let initialized = false;
 let recording = false;
 let resources = [];
 
-let pathRoot, pathObs, pathObsExe;
-
-const productionMode = !!global.ISPKG;
-if (productionMode) {
-    console.log("Running in production mode");
-    pathRoot = path.dirname(process.execPath);
-    pathObs = path.join(pathRoot, "lib");
-    pathObsExe = path.join(pathObs, "obs64.exe");
-} else {
-    console.log("Running in DEVELOPMENT mode");
-    pathRoot = __dirname;
-    pathObs = path.join(pathRoot, "node_modules", "@streamlabs", "obs-studio-node");
-    pathObsExe = path.join(pathObs, "obs64.exe");
-}
-
-const pathData = path.join(pathRoot, "obs-data");
-const pathObsBasicConfig = path.join(pathData, "basic.ini");
-
-if (!fs.existsSync(pathObsExe)) {
-    console.log("obs-studio-node could not be found. Ensure it exists in ./lib for production or node_modules for dev.");
-}
-
-function rewriteBasicConfig() {
-    // streamlabs obs-studio-node likes to create invalid config files (which then causes OBS
-    // to fail to initialize). We try to handle that by writing our own.
-    console.log("Writing new config to: " + pathObsBasicConfig);
-    fs.writeFileSync(pathObsBasicConfig, "[Video]\nBaseCX=100\nBaseCY=100\nOutputCX=100\nOutputCY=100");
-}
-
-console.log("Root directory is: " + pathRoot);
-console.log("OBS is located at: " + pathObsExe);
-
 const signals = new Subject();
 function getNextSignalInfo(predicate) {
     return new Promise((resolve, reject) => {
@@ -60,20 +28,51 @@ function isInitialized() {
     return initialized;
 }
 
-function init() {
-    console.log("Starting OBS...");
+function init(connectId, workDir, dataDir) {
+    console.log("Begin OBS init...");
 
-    if (!fs.existsSync(pathData)) {
-        fs.mkdirSync(pathData);
+    const productionMode = !!global.ISPKG;
+
+    const pathRoot = productionMode ? path.dirname(process.execPath) : __dirname;
+    const pathData = !!dataDir ? path.resolve(dataDir) : path.join(pathRoot, "obs-data");
+    const pathObs = !!workDir ? path.resolve(workDir) : (productionMode ? path.join(pathRoot, "lib") : path.join(pathRoot, "node_modules", "@streamlabs", "obs-studio-node"));
+    const pathObsExe = path.join(pathObs, "obs64.exe");
+    const pathObsBasicConfig = path.join(pathData, "basic.ini");
+
+    const debugPath = (pname, create, pdir, fcontent) => {
+        console.log(`  - ${pname}: '${pdir}'`);
+        if (!fs.existsSync(pdir)) {
+            if (create) {
+                if (fcontent) {
+                    console.log(`      WARNING: '${pname}' does not exist. Writing new file...`);
+                    fs.writeFileSync(pdir, fcontent);
+                } else {
+                    console.log(`      WARNING: '${pname}' does not exist. Creating directory...`);
+                    fs.mkdirSync(pdir);
+                }
+
+            } else {
+                console.log(`      WARNING: '${pname}' does not exist. Are you missing a required command line argument?`);
+            }
+        }
     }
 
-    if (!fs.existsSync(pathObsBasicConfig)) {
-        console.log("Basic settings do not exist; creating...");
-        rewriteBasicConfig();
+    console.log("Using the following paths:")
+    debugPath("ROOT", false, pathRoot);
+    debugPath("DATA", true, pathData);
+    debugPath("CONFIG", true, pathObsBasicConfig, "[Video]\nBaseCX=100\nBaseCY=100\nOutputCX=100\nOutputCY=100");
+    debugPath("OBS_LIB", false, pathObs);
+
+    if (!!connectId) {
+        console.log("Attempting to connect to pre-existing OBS server: " + connectId);
+        osn.NodeObs.IPC.connect(connectId);
+    } else {
+        debugPath("OBS_EXE", false, pathObsExe);
+        console.log("Starting new OBS server process and connecting...");
+        osn.NodeObs.IPC.setServerPath(pathObsExe, pathObs);
+        osn.NodeObs.IPC.host("obs-express-" + uuid());
     }
 
-    osn.NodeObs.IPC.setServerPath(pathObsExe, pathObs);
-    osn.NodeObs.IPC.host("obs-express-" + uuid());
     osn.NodeObs.SetWorkingDirectory(pathObs);
 
     osn.NodeObs.OBS_service_connectOutputSignals((signalInfo) => {
@@ -83,30 +82,30 @@ function init() {
 
     const initResult = osn.NodeObs.OBS_API_initAPI('en-US', pathData, '1.0.0');
 
-    if (initResult !== 0) { 
+    if (initResult !== 0) {
         //See obs-studio-node/module.ts:EVideoCodes or obs-studio/obs-defs.h for C constants
         switch (initResult) {
             case -1: // Fail
-                throw new Error("Failed to initialize OBS API (EFail). OBS core is already disposed or has not been created.");
+                throw new Error("Failed to initialize OBS API (EFail). OBS core is already disposed or was not created. Ensure sure OBS lib path is correct.");
             case -2: // NotSupported
                 throw new Error("Failed to initialize OBS API (NotSupported). Your video drivers may be out of date?");
             case -3: // InvalidParam
-                throw new Error("Failed to initialize OBS API (InvalidParam). The incorrect internal parameters were sent to OBS during startup. This may be caused by an invalid OBS config, you can try deleting it at: " + pathObsBasicConfig);
+                throw new Error("Failed to initialize OBS API (InvalidParam). The incorrect parameters were sent to OBS during startup. This may be caused by an invalid OBS config, you can try deleting it at: " + pathObsBasicConfig);
             case -4: // CurrentlyActive
                 throw new Error("Failed to initialize OBS API (CurrentlyActive). OBS is currently recording and video settings can not be changed.");
             case -5: // ModuleNotFound
-                throw new Error("Failed to initialize OBS API (ModuleNotFound). DirectX or related drivers could not be found on your system. Your video drivers may be out of date?");
+                throw new Error("Failed to initialize OBS API (ModuleNotFound). Your video drivers may be out of date?");
             default:
-                throw new Error("An unknown error was encountered while initializing OBS (" + initResult + ")");
+                throw new Error("An unknown error was encountered while initializing OBS (code " + initResult + ")");
         }
     }
 
-    initialized = true;
-
+    console.log("Reconfiguring required settings");
     osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
     osnset.setSetting("Video", "Untitled", "FPSType", "Integer FPS Value");
 
-    console.log("Starting OBS... Ready");
+    initialized = true;
+    console.log("Started OBS successfully");
 }
 
 async function release() {
@@ -414,7 +413,6 @@ async function recordingStop() {
 function assertInitialized() {
     if (!initialized) throw new Error("OBS is not initialized. Call init() first.");
 }
-
 
 function freeResources() {
     const res = resources;
