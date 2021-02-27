@@ -10,6 +10,7 @@ const screen = require('bindings')('getscreens').getInfo;
 
 let initialized = false;
 let recording = false;
+let recordingStartTime;
 let resources = [];
 
 const signals = new Subject();
@@ -415,6 +416,7 @@ async function recordingStart(setup) {
             throw new Error(`Recieved signal error '${sig.signal}' code ${sig.code}: ${sig.error}`);
 
         recording = true;
+        recordingStartTime = Date.now();
         console.log('OBS Start recording... Complete');
     } catch (e) {
         freeResources();
@@ -436,6 +438,7 @@ async function recordingStop() {
 
     // TODO ADD SIGNAL
     recording = false;
+    recordingStartTime = null;
 
     // free scene resources
     freeResources();
@@ -461,7 +464,12 @@ function freeResources() {
 }
 
 function getStatistics() {
-    return osn.NodeObs.OBS_API_getPerformanceStatistics();
+    return {
+        initialized: isInitialized(),
+        recording: isRecording(),
+        recordingTime: !!recordingStartTime ? Date.now() - recordingStartTime : 0,
+        statistics: osn.NodeObs.OBS_API_getPerformanceStatistics(),
+    };
 }
 
 exports.isRecording = isRecording;

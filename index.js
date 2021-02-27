@@ -96,11 +96,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/status", (req, res) => {
-    DO_JSON(res, {
-        initialized: obs.isInitialized(),
-        recording: obs.isRecording(),
-        statistics: obs.getStatistics(),
-    });
+    DO_JSON(res, obs.getStatistics());
 });
 
 app.get("/audio/speakers", (req, res) => {
