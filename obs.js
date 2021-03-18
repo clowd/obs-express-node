@@ -6,12 +6,16 @@ const osnset = require("./settings");
 const fs = require("fs");
 const { Subject } = require("rxjs");
 const { first } = require('rxjs/operators');
-const screen = require('bindings')('getscreens').getInfo;
+const screenlib = require('bindings')('getscreens');
+const screen = screenlib.getScreenInfo;
+const mouse = screenlib.getMouseState;
 
 let initialized = false;
 let recording = false;
 let recordingStartTime;
 let resources = [];
+let trackerInterval;
+let trackerPath;
 
 const signals = new Subject();
 function getNextSignalInfo(predicate) {
@@ -39,6 +43,7 @@ function init(connectId, workDir, dataDir) {
     const pathObs = !!workDir ? path.resolve(workDir) : (productionMode ? path.join(pathRoot, "lib") : path.join(pathRoot, "node_modules", "@streamlabs", "obs-studio-node"));
     const pathObsExe = path.join(pathObs, "obs64.exe");
     const pathObsBasicConfig = path.join(pathData, "basic.ini");
+    trackerPath = path.join(pathRoot, "tracker.png");
 
     const debugPath = (pname, create, pdir, fcontent) => {
         console.log(`  - ${pname}: '${pdir}'`);
@@ -63,6 +68,7 @@ function init(connectId, workDir, dataDir) {
     debugPath("DATA", true, pathData);
     debugPath("CONFIG", true, pathObsBasicConfig, "[Video]\nBaseCX=100\nBaseCY=100\nOutputCX=100\nOutputCY=100");
     debugPath("OBS_LIB", false, pathObs);
+    debugPath("TRACKER", false, trackerPath);
 
     if (!!connectId) {
         console.log("Attempting to connect to pre-existing OBS server: " + connectId);
@@ -182,6 +188,7 @@ async function recordingStart(setup) {
             performanceMode,
             subsamplingMode,
             containerFormat,
+            trackMouseClicks,
             ...other
         } = setup;
 
@@ -204,6 +211,7 @@ async function recordingStart(setup) {
         performanceMode = validate(false, performanceMode, _.isString, "medium", "performanceMode must be a string");
         subsamplingMode = validate(false, subsamplingMode, _.isString, "yuv420", "subsamplingMode must be a string");
         containerFormat = validate(false, containerFormat, _.isString, "mp4", "containerFormat must be a string");
+        trackMouseClicks = validate(false, trackMouseClicks, _.isBoolean, false, "trackMouseClicks must be a boolean");
         performanceMode = performanceMode.toLowerCase();
         subsamplingMode = subsamplingMode.toLowerCase();
 
@@ -418,6 +426,61 @@ async function recordingStart(setup) {
         recording = true;
         recordingStartTime = Date.now();
         console.log('OBS Start recording... Complete');
+
+
+        // MOUSE TRACKER
+        // =============================
+        if (trackMouseClicks && fs.existsSync(trackerPath)) {
+            const imgSet = {
+                unload: true,
+                file: trackerPath,
+            }
+            const imageSource = osn.InputFactory.create("image_source", `mouse_highlight`, imgSet);
+            resources.push(imageSource);
+
+            const filterSettings = {
+                opacity: 0,
+            }
+            const imageFilter = osn.FilterFactory.create("color_filter", "mouse_color_correction", filterSettings);
+            imageSource.addFilter(imageFilter);
+            resources.push(imageFilter);
+
+            const imgsci = scene.add(imageSource);
+            resources.push(imgsci);
+
+            const mouseTime = Math.min(16, 1000 / fps);
+            console.log(`Mouse tracker enabled: Resolution is ${mouseTime}ms`);
+
+            const animationDuration = 400; // ms
+            const animationMinRadius = 15; // pixels
+            const animationGrowRadius = 35; // grow by 35 px. 50 px at max size.
+            const trackerHalfSize = 50; // pixels
+            let lastMouseClick, lastMouseClickPosition, mouseVisible;
+
+            trackerInterval = setInterval(() => {
+                // update tracker position
+                let m = mouse();
+                if (m.pressed) {
+                    lastMouseClick = Date.now();
+                    lastMouseClickPosition = { x: m.x, y: m.y };
+                }
+
+                let lastClickSpan = Date.now() - lastMouseClick;
+                if (lastClickSpan < animationDuration) {
+                    mouseVisible = true;
+                    let opacity = (1 - (lastClickSpan / animationDuration)) * 100;
+                    let radius = animationMinRadius + ((lastClickSpan / animationDuration) * animationGrowRadius);
+                    let scale = radius / (trackerHalfSize * 2);
+
+                    imgsci.position = { x: lastMouseClickPosition.x - (trackerHalfSize * scale), y: lastMouseClickPosition.y - (trackerHalfSize * scale) };
+                    imgsci.scale = { x: scale, y: scale };
+                    imageFilter.update({ opacity });
+                } else if (mouseVisible) {
+                    mouseVisible = false;
+                    imageFilter.update({ opacity: 0 });
+                }
+            }, mouseTime);
+        }
     } catch (e) {
         freeResources();
         recording = false;
@@ -429,6 +492,7 @@ async function recordingStop() {
     assertInitialized();
     if (!recording) { return; }
 
+    clearInterval(trackerInterval);
     console.log('OBS Stop recording...');
     osn.NodeObs.OBS_service_stopRecording();
 
@@ -451,6 +515,7 @@ function assertInitialized() {
 }
 
 function freeResources() {
+    clearInterval(trackerInterval);
     const res = resources;
     resources = [];
     for (const r in res) {

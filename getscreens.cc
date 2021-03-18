@@ -62,15 +62,6 @@ namespace get_screen {
 		}
 	}
 
-	/**
-	 * Monitor info structure:
-	 * 	{
-	 *  	x: Number,
-	 *   	y: Number,
-	 *    width: Number,
-	 *    height: Number
-	 *  }
-	 */
 	struct screen_info {
 		screen_info(int32_t x, int32_t y, int32_t width, int32_t height, uint32_t dpi) : x(x), y(y), width(width), height(height), dpi(dpi) {}
 		int32_t x;
@@ -80,10 +71,7 @@ namespace get_screen {
 		uint32_t dpi;
 	};
 
-	/**
-	 * Gets information about hMonitor
-	 */
-	BOOL __cdecl InfoMonitor(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
+	BOOL __cdecl EnumMonitorCallback(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
 		std::vector<screen_info>& infos = *((std::vector<screen_info>*)dwData);
 
 		MONITORINFOEX mon_info{};
@@ -93,7 +81,7 @@ namespace get_screen {
 		uint32_t dpi = GetMonitorDpi(hMonitor);
 
 		infos.emplace_back(
-			mon_info.rcMonitor.left, 
+			mon_info.rcMonitor.left,
 			mon_info.rcMonitor.top,
 			mon_info.rcMonitor.right - mon_info.rcMonitor.left,
 			mon_info.rcMonitor.bottom - mon_info.rcMonitor.top,
@@ -102,13 +90,10 @@ namespace get_screen {
 		return TRUE;
 	}
 
-	/**
-	 * Gets info about all connected monitors and return an array of objects.
-	 */
-	void getInfo(const FunctionCallbackInfo<Value>& args) {
+	void getScreenInfo(const FunctionCallbackInfo<Value>& args) {
 		std::vector<screen_info> screens{};
 		HDC hdc = GetDC(NULL);
-		EnumDisplayMonitors(hdc, NULL, InfoMonitor, (LPARAM)&screens);
+		EnumDisplayMonitors(hdc, NULL, EnumMonitorCallback, (LPARAM)&screens);
 
 		Isolate* isolate = args.GetIsolate();
 		Local<Array> array = Array::New(isolate, (int)screens.size());
@@ -130,9 +115,30 @@ namespace get_screen {
 		args.GetReturnValue().Set(array);
 	}
 
+	void getMouseState(const FunctionCallbackInfo<Value>& args) {
+		Isolate* isolate = args.GetIsolate();
+		Local<Object> obj = Object::New(isolate);
+
+		POINT p;
+		GetCursorPos(&p);
+		int32_t x = p.x;
+		int32_t y = p.y;
+
+		bool leftkeydown = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
+		bool rightkeydown = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
+		bool pressed = leftkeydown || rightkeydown;
+
+		obj->Set(String::NewFromUtf8(isolate, "x"), Int32::New(isolate, x));
+		obj->Set(String::NewFromUtf8(isolate, "y"), Int32::New(isolate, y));
+		obj->Set(String::NewFromUtf8(isolate, "pressed"), v8::Boolean::New(isolate, pressed));
+
+		args.GetReturnValue().Set(obj);
+	}
+
 	void init(Local<Object> exports) {
 		SetAware();
-		NODE_SET_METHOD(exports, "getInfo", getInfo);
+		NODE_SET_METHOD(exports, "getScreenInfo", getScreenInfo);
+		NODE_SET_METHOD(exports, "getMouseState", getMouseState);
 	}
 
 	NODE_MODULE(getscreens, init);
