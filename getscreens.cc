@@ -17,6 +17,7 @@ namespace get_screen {
 	using v8::String;
 	using v8::Value;
 	using v8::Array;
+	using v8::Context;
 
 	typedef enum PROCESS_DPI_AWARENESS {
 		PROCESS_DPI_UNAWARE = 0,
@@ -96,19 +97,21 @@ namespace get_screen {
 		EnumDisplayMonitors(hdc, NULL, EnumMonitorCallback, (LPARAM)&screens);
 
 		Isolate* isolate = args.GetIsolate();
+		auto ctx = isolate->GetCurrentContext();
+
 		Local<Array> array = Array::New(isolate, (int)screens.size());
 
 		for (int32_t i = 0; i < screens.size(); ++i) {
 			Local<Object> bounds = Object::New(isolate);
 			Local<Object> obj = Object::New(isolate);
-			bounds->Set(String::NewFromUtf8(isolate, "x"), Int32::New(isolate, screens[i].x));
-			bounds->Set(String::NewFromUtf8(isolate, "y"), Int32::New(isolate, screens[i].y));
-			bounds->Set(String::NewFromUtf8(isolate, "width"), Int32::New(isolate, screens[i].width));
-			bounds->Set(String::NewFromUtf8(isolate, "height"), Int32::New(isolate, screens[i].height));
-			obj->Set(String::NewFromUtf8(isolate, "bounds"), bounds);
-			obj->Set(String::NewFromUtf8(isolate, "dpi"), Int32::NewFromUnsigned(isolate, screens[i].dpi));
-			obj->Set(String::NewFromUtf8(isolate, "index"), Int32::New(isolate, i));
-			array->Set(i, obj);
+			bounds->Set(ctx, String::NewFromUtf8(isolate, "x").ToLocalChecked(), Int32::New(isolate, screens[i].x));
+			bounds->Set(ctx, String::NewFromUtf8(isolate, "y").ToLocalChecked(), Int32::New(isolate, screens[i].y));
+			bounds->Set(ctx, String::NewFromUtf8(isolate, "width").ToLocalChecked(), Int32::New(isolate, screens[i].width));
+			bounds->Set(ctx, String::NewFromUtf8(isolate, "height").ToLocalChecked(), Int32::New(isolate, screens[i].height));
+			obj->Set(ctx, String::NewFromUtf8(isolate, "bounds").ToLocalChecked(), bounds);
+			obj->Set(ctx, String::NewFromUtf8(isolate, "dpi").ToLocalChecked(), Int32::NewFromUnsigned(isolate, screens[i].dpi));
+			obj->Set(ctx, String::NewFromUtf8(isolate, "index").ToLocalChecked(), Int32::New(isolate, i));
+			array->Set(ctx, i, obj);
 		}
 
 		ReleaseDC(0, hdc);
@@ -118,6 +121,7 @@ namespace get_screen {
 	void getMouseState(const FunctionCallbackInfo<Value>& args) {
 		Isolate* isolate = args.GetIsolate();
 		Local<Object> obj = Object::New(isolate);
+		auto ctx = isolate->GetCurrentContext();
 
 		POINT p;
 		GetCursorPos(&p);
@@ -128,9 +132,9 @@ namespace get_screen {
 		bool rightkeydown = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
 		bool pressed = leftkeydown || rightkeydown;
 
-		obj->Set(String::NewFromUtf8(isolate, "x"), Int32::New(isolate, x));
-		obj->Set(String::NewFromUtf8(isolate, "y"), Int32::New(isolate, y));
-		obj->Set(String::NewFromUtf8(isolate, "pressed"), v8::Boolean::New(isolate, pressed));
+		obj->Set(ctx, String::NewFromUtf8(isolate, "x").ToLocalChecked(), Int32::New(isolate, x));
+		obj->Set(ctx, String::NewFromUtf8(isolate, "y").ToLocalChecked(), Int32::New(isolate, y));
+		obj->Set(ctx, String::NewFromUtf8(isolate, "pressed").ToLocalChecked(), v8::Boolean::New(isolate, pressed));
 
 		args.GetReturnValue().Set(obj);
 	}

@@ -10,12 +10,13 @@
         "kill": "taskkill /F /IM obs-express.exe & taskkill /F /IM obs64.exe || ECHO.",
         "clean": "npm run kill & node scripts/clean.js",
         "build": "npm run clean && npm run gyp && npm run build:pkg && npm run build:copy",
-        "build:pkg": "pkg scripts/entry --targets node12-windows-x64 --output \"./bin/obs-express.exe\"",
+        "build:pkg": "node node_modules/pkg/lib-es5/bin.js scripts/entry --targets node14-windows-x64 --output \"./bin/obs-express.exe\"",
         "build:copy": "node scripts/copy.js",
-        "gyp": "node-gyp rebuild --target=v12.18.1"
+        "gyp": "node-gyp rebuild --target=v14.17.2"
     },
     "author": "caesay",
     "license": "GPL-2.0",
+    "//": "get updated version of OSN from here https://github.com/stream-labs/streamlabs-obs/blob/master/scripts/repositories.json",
     "dependencies": {
         "@streamlabs/obs-studio-node": "https://s3-us-west-2.amazonaws.com/obsstudionodes3.streamlabs.com/osn-0.14.11-release-win64.tar.gz",
         "bindings": "^1.5.0",
