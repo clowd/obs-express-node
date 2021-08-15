@@ -18,18 +18,18 @@
     "license": "GPL-2.0",
     "//": "get updated version of OSN from here https://github.com/stream-labs/streamlabs-obs/blob/master/scripts/repositories.json",
     "dependencies": {
-        "@streamlabs/obs-studio-node": "https://s3-us-west-2.amazonaws.com/obsstudionodes3.streamlabs.com/osn-0.14.11-release-win64.tar.gz",
+        "@streamlabs/obs-studio-node": "https://s3-us-west-2.amazonaws.com/obsstudionodes3.streamlabs.com/osn-0.16.15-release-win64.tar.gz",
         "bindings": "^1.5.0",
         "body-parser": "^1.19.0",
-        "commander": "^7.1.0",
+        "commander": "^8.1.0",
         "express": "^4.17.1",
-        "lodash": "^4.17.20",
-        "rxjs": "^6.6.3",
+        "lodash": "^4.17.21",
+        "rxjs": "^7.3.0",
         "uuid": "^8.3.2"
     },
     "devDependencies": {
         "copy": "^0.3.2",
-        "node-gyp": "^7.1.2",
-        "pkg": "^4.4.9"
+        "node-gyp": "^8.1.0",
+        "pkg": "^5.3.1"
     }
 }
