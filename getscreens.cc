@@ -123,18 +123,23 @@ namespace get_screen {
 		Local<Object> obj = Object::New(isolate);
 		auto ctx = isolate->GetCurrentContext();
 
+		// get mouse state & position
 		POINT p;
 		GetCursorPos(&p);
 		int32_t x = p.x;
 		int32_t y = p.y;
-
 		bool leftkeydown = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
 		bool rightkeydown = GetAsyncKeyState(VK_RBUTTON) & 0x8000;
 		bool pressed = leftkeydown || rightkeydown;
 
+		// get dpi of monitor mouse is located on
+        HMONITOR hMon = MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST);
+        uint32_t dpi = GetMonitorDpi(hMon);
+
 		obj->Set(ctx, String::NewFromUtf8(isolate, "x").ToLocalChecked(), Int32::New(isolate, x));
 		obj->Set(ctx, String::NewFromUtf8(isolate, "y").ToLocalChecked(), Int32::New(isolate, y));
 		obj->Set(ctx, String::NewFromUtf8(isolate, "pressed").ToLocalChecked(), v8::Boolean::New(isolate, pressed));
+        obj->Set(ctx, String::NewFromUtf8(isolate, "dpi").ToLocalChecked(), Int32::New(isolate, dpi));
 
 		args.GetReturnValue().Set(obj);
 	}

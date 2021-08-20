@@ -452,17 +452,26 @@ async function recordingStart(setup) {
             console.log(`Mouse tracker enabled: Resolution is ${mouseTime}ms`);
 
             const animationDuration = 400; // ms
-            const animationMinRadius = 15; // pixels
-            const animationGrowRadius = 35; // grow by 35 px. 50 px at max size.
-            const trackerHalfSize = 50; // pixels
+            let animationMinRadius, animationGrowRadius, trackerHalfSize;
             let lastMouseClick, lastMouseClickPosition, mouseVisible;
+
+            const updMouseData = (m) => {
+                // mouse position
+                lastMouseClick = Date.now();
+                lastMouseClickPosition = { x: m.x, y: m.y };
+
+                // adjust tracker size based on monitor dpi
+                const mzoom = m.dpi / 96;
+                animationMinRadius = 15 * mzoom; // px - tracker starting size
+                animationGrowRadius = 45 * mzoom; // px - tracker growth amount
+                trackerHalfSize = animationMinRadius + animationGrowRadius; // px - tracker final radius
+            };
 
             trackerInterval = setInterval(() => {
                 // update tracker position
                 let m = mouse();
                 if (m.pressed) {
-                    lastMouseClick = Date.now();
-                    lastMouseClickPosition = { x: m.x, y: m.y };
+                    updMouseData(m);
                 }
 
                 let lastClickSpan = Date.now() - lastMouseClick;
@@ -472,7 +481,10 @@ async function recordingStart(setup) {
                     let radius = animationMinRadius + ((lastClickSpan / animationDuration) * animationGrowRadius);
                     let scale = radius / (trackerHalfSize * 2);
 
-                    imgsci.position = { x: lastMouseClickPosition.x - (trackerHalfSize * scale), y: lastMouseClickPosition.y - (trackerHalfSize * scale) };
+                    imgsci.position = { 
+                        x: lastMouseClickPosition.x - (trackerHalfSize * scale) - captureRegion.x, 
+                        y: lastMouseClickPosition.y - (trackerHalfSize * scale) - captureRegion.y
+                    };
                     imgsci.scale = { x: scale, y: scale };
                     imageFilter.update({ opacity });
                 } else if (mouseVisible) {
