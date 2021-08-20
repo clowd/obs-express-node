@@ -1,6 +1,6 @@
 {
     "name": "obs-express",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "osnVersion": "osn-0.16.15",
     "description": "Host and control libobs via an express http server",
     "main": "index.js",
