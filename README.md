@@ -69,7 +69,7 @@ Start a video recording. Must contain the area of the screen to record (`capture
   "hardwareAccelerated": true,
   
   // directory to write video file to
-  "outputDirectory": "C:\\Users\\Caelan\\Videos",
+  "outputDirectory": "C:\\Videos",
   
   // container format can be mkv or mp4. mkv is recommended, since file is still usable if partially corrupted
   "containerFormat": "mkv",
