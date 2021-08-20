@@ -3,7 +3,14 @@ Small library to host libobs behind an express-js http server so it can be contr
 Wraps the excellent [stream-labs/obs-studio-node](https://github.com/stream-labs/obs-studio-node) project. 
 Run `obs-express.exe` and it will launch an http server which can be used to remotely control obs. 
 
-The following API functions are supported -
+The following API functions are supported 
+
+- [List Audio Devices](#list-audio-devices)
+- [Start Recording](#start-recording)
+- [Stop Recording](#stop-recording)
+- [Get Status / Statistics](#get-status--statistics)
+- [Get Settings](#get-settings)
+- [Set Settings](#set-settings)
 
 ## List Audio Devices
 Provides a list of audio devices to be used with `/recording/start`
