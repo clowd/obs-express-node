@@ -452,44 +452,38 @@ async function recordingStart(setup) {
             console.log(`Mouse tracker enabled: Resolution is ${mouseTime}ms`);
 
             const animationDuration = 400; // ms
-            let animationMinRadius, animationGrowRadius, trackerHalfSize;
             let lastMouseClick, lastMouseClickPosition, mouseVisible;
 
-            const updMouseData = (m) => {
-                // mouse position
-                lastMouseClick = Date.now();
-                lastMouseClickPosition = { x: m.x, y: m.y };
-
-                // adjust tracker size based on monitor dpi
-                const mzoom = m.dpi / 96;
-                animationMinRadius = 15 * mzoom; // px - tracker starting size
-                animationGrowRadius = 45 * mzoom; // px - tracker growth amount
-                trackerHalfSize = animationMinRadius + animationGrowRadius; // px - tracker final radius
-            };
-
             trackerInterval = setInterval(() => {
-                // update tracker position
-                let m = mouse();
-                if (m.pressed) {
-                    updMouseData(m);
+                let mouseData = mouse();
+                if (mouseData.pressed) {
+                    lastMouseClickPosition = mouseData;
+                    lastMouseClick = Date.now();
                 }
 
-                let lastClickSpan = Date.now() - lastMouseClick;
-                if (lastClickSpan < animationDuration) {
+                let lastClickAgo = Date.now() - lastMouseClick;
+                if (lastClickAgo < animationDuration) {
                     mouseVisible = true;
-                    let opacity = (1 - (lastClickSpan / animationDuration)) * 100;
-                    let radius = animationMinRadius + ((lastClickSpan / animationDuration) * animationGrowRadius);
-                    let scale = radius / (trackerHalfSize * 2);
+                    const opacity = (1 - (lastClickAgo / animationDuration)) * 100;
+                    const mouseZoom = lastMouseClickPosition.dpi / 96;
 
-                    imgsci.position = { 
-                        x: lastMouseClickPosition.x - (trackerHalfSize * scale) - captureRegion.x, 
-                        y: lastMouseClickPosition.y - (trackerHalfSize * scale) - captureRegion.y
+                    // radius: min 15, will grow +35 to max of 50 (*dpi)
+                    const radius = (10 + ((lastClickAgo / animationDuration) * 30)) * mouseZoom;
+
+                    // scale: intendedRenderedSize/actualImageSize - the tracker.png is 100x100
+                    const scale = radius / 50;
+
+                    imgsci.position = {
+                        x: lastMouseClickPosition.x - radius - captureRegion.x,
+                        y: lastMouseClickPosition.y - radius - captureRegion.y
                     };
                     imgsci.scale = { x: scale, y: scale };
                     imageFilter.update({ opacity });
+                    // console.log(`zoom: ${mouseZoom},  opacity: ${opacity},  radius: ${radius},  scale: ${scale},  x: ${imgsci.position.x}  y: ${imgsci.position.y}`);
                 } else if (mouseVisible) {
                     mouseVisible = false;
                     imageFilter.update({ opacity: 0 });
+                    // console.log("mouse off");
                 }
             }, mouseTime);
         }
