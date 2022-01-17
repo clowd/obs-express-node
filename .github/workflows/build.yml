@@ -29,7 +29,6 @@ jobs:
       with:
         type: "zip"
         path: "bin/"
-        recursive: true
         filename: "obs-express.zip"
     - name: Upload build artifact
       uses: actions/upload-artifact@v2.2.2
