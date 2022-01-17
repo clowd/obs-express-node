@@ -1,7 +1,7 @@
 {
     "name": "obs-express",
-    "version": "0.0.10",
-    "osnVersion": "osn-0.16.15",
+    "version": "0.0.11",
+    "osnVersion": "osn-0.19.27",
     "description": "Host and control libobs via an express http server",
     "main": "index.js",
     "private": true,
@@ -18,18 +18,18 @@
     "license": "GPL-2.0",
     "//": "get updated version of OSN from here https://github.com/stream-labs/streamlabs-obs/blob/master/scripts/repositories.json and don't forget to update osnVersion",
     "dependencies": {
-        "@streamlabs/obs-studio-node": "https://s3-us-west-2.amazonaws.com/obsstudionodes3.streamlabs.com/osn-0.16.15-release-win64.tar.gz",
+        "@streamlabs/obs-studio-node": "https://s3-us-west-2.amazonaws.com/obsstudionodes3.streamlabs.com/osn-0.19.27-release-win64.tar.gz",
         "bindings": "^1.5.0",
-        "body-parser": "^1.19.0",
-        "commander": "^8.1.0",
-        "express": "^4.17.1",
+        "body-parser": "^1.19.1",
+        "commander": "^8.3.0",
+        "express": "^4.17.2",
         "lodash": "^4.17.21",
-        "rxjs": "^7.3.0",
+        "rxjs": "^7.5.2",
         "uuid": "^8.3.2"
     },
     "devDependencies": {
         "copy": "^0.3.2",
-        "node-gyp": "^8.1.0",
-        "pkg": "^5.3.1"
+        "node-gyp": "^8.4.1",
+        "pkg": "^5.5.2"
     }
 }
