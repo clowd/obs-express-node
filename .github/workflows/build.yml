@@ -25,11 +25,12 @@ jobs:
     - run: npm ci
     - run: npm run build
     - name: Compress artifacts
-      uses: papeloto/action-zip@v1
+      uses: thedoctor0/zip-release@master
       with:
-        files: "bin/"
+        type: "zip"
+        path: "bin/"
         recursive: true
-        dest: "obs-express.zip"
+        filename: "obs-express.zip"
     - name: Upload build artifact
       uses: actions/upload-artifact@v2.2.2
       with: 
