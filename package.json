@@ -10,9 +10,9 @@
         "kill": "taskkill /F /IM obs-express.exe & taskkill /F /IM obs64.exe || ECHO.",
         "clean": "npm run kill & node scripts/clean.js",
         "build": "npm run clean && npm run gyp && npm run build:pkg && npm run build:copy",
-        "build:pkg": "node node_modules/pkg/lib-es5/bin.js scripts/entry --targets node14-windows-x64 --output \"./bin/obs-express.exe\"",
+        "build:pkg": "node node_modules/pkg/lib-es5/bin.js scripts/entry --targets node16-windows-x64 --output \"./bin/obs-express.exe\"",
         "build:copy": "node scripts/copy.js",
-        "gyp": "node-gyp rebuild --target=v14.17.2"
+        "gyp": "node-gyp rebuild --target=v16.13.2"
     },
     "author": "caesay",
     "license": "GPL-2.0",
