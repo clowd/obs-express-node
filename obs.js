@@ -9,6 +9,7 @@ const { first } = require('rxjs/operators');
 const screenlib = require('bindings')('getscreens');
 const screen = screenlib.getScreenInfo;
 const mouse = screenlib.getMouseState;
+const { createMicrophoneInput, createSpeakerInput } = require("./volmeter");
 
 let initialized = false;
 let recording = false;
@@ -142,24 +143,6 @@ async function release() {
 
     console.log('OBS shutdown complete');
 }
-
-function getSpeakers() {
-    return getAudioDevices("wasapi_output_capture", "desktop-audio");
-}
-
-function getMicrophones() {
-    return getAudioDevices("wasapi_input_capture", "mic-audio");
-}
-
-function getAudioDevices(type, subtype) {
-    assertInitialized();
-    const dummyDevice = osn.InputFactory.create(type, subtype, { device_id: 'does_not_exist' });
-    const devices = dummyDevice.properties.get('device_id').details.items.map(({ name, value }) => {
-        return { device_id: value, name, };
-    });
-    dummyDevice.release();
-    return devices;
-};
 
 function intersectRect(r1, r2) {
     if (r1.x < r2.x + r2.width && r2.x < r1.x + r1.width && r1.y < r2.y + r2.height)
@@ -399,7 +382,7 @@ async function recordingStart(setup) {
         let currentTrack = 2;
 
         for (const did of speakers) {
-            const source = osn.InputFactory.create('wasapi_output_capture', 'desktop-audio', { device_id: did });
+            const source = createSpeakerInput(did);
             resources.push(source);
             osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
             source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
@@ -408,7 +391,7 @@ async function recordingStart(setup) {
         }
 
         for (const did of microphones) {
-            const source = osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: did });
+            const source = createMicrophoneInput(did);
             resources.push(source);
             osnset.setSetting("Output", `Audio - Track ${currentTrack}`, `Track${currentTrack}Name`, `audio_${did}`);
             source.audioMixers = 1 | (1 << currentTrack - 1); // Bit mask to output to only tracks 1 and current track
@@ -558,8 +541,6 @@ exports.release = release;
 exports.recordingStart = recordingStart;
 exports.recordingStop = recordingStop;
 exports.getStatistics = getStatistics;
-exports.getSpeakers = getSpeakers;
-exports.getMicrophones = getMicrophones;
 exports.setSetting = osnset.setSetting;
 exports.getSettingsCategory = osnset.getSettingsCategory;
 exports.updateSettingsCategory = osnset.updateSettingsCategory;

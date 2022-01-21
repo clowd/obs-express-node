@@ -101,11 +101,11 @@ app.get("/status", (req, res) => {
 });
 
 app.get("/audio/speakers", (req, res) => {
-    DO_JSON(res, obs.getSpeakers());
+    DO_JSON(res, volmeter.getSpeakers());
 });
 
 app.get("/audio/microphones", (req, res) => {
-    DO_JSON(res, obs.getMicrophones());
+    DO_JSON(res, volmeter.getMicrophones());
 });
 
 app.get("/settings/:settingKey", (req, res) => {

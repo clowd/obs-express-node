@@ -43,10 +43,13 @@ function createVolmeterServer(expressServer) {
         try {
             const [_path, params] = connectionRequest?.url?.split("?");
             const connectionParams = queryString.parse(params);
+            if (!_.isString(connectionParams.device_type) || !_.isString(connectionParams.device_id)) {
+                throw new Error("device_type and device_id are required query parameters");
+            }
 
             // handle keepalive response and mark socket alive
             ws.isAlive = true;
-            ws.volmeter = createVolmeter(ws, connectionParams.deviceType, connectionParams.deviceId, connectionParams.algorithm);
+            ws.volmeter = createVolmeter(ws, connectionParams.device_type, connectionParams.device_id, connectionParams.algorithm);
             ws.on('pong', function heartbeat() { this.isAlive = true; });
             clients.push(ws);
         } catch (e) {
@@ -58,21 +61,34 @@ function createVolmeterServer(expressServer) {
     });
 }
 
-function createMicrophoneInput(deviceid) {
-    return osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: deviceid });
-}
-
 function createSpeakerInput(deviceid) {
     return osn.InputFactory.create('wasapi_output_capture', 'desktop-audio', { device_id: deviceid });
 }
 
+function getSpeakers() {
+    return getAudioDevices("wasapi_output_capture", "desktop-audio");
+}
+
+function createMicrophoneInput(deviceid) {
+    return osn.InputFactory.create('wasapi_input_capture', 'mic-audio', { device_id: deviceid });
+}
+
+function getMicrophones() {
+    return getAudioDevices("wasapi_input_capture", "mic-audio");
+}
+
+function getAudioDevices(type, subtype) {
+    const dummyDevice = osn.InputFactory.create(type, subtype, { device_id: 'does_not_exist' });
+    const devices = dummyDevice.properties.get('device_id').details.items.map(({ name, value }) => {
+        return { device_id: value, name, };
+    });
+    dummyDevice.release();
+    return devices;
+};
+
 function createVolmeter(ws, inputType, inputId, algorithm) {
     let input, volmeter, callbackInfo;
     try {
-        if (!_.isString(inputType) || !_.isString(inputId)) {
-            throw new Error("deviceType and deviceId are required query parameters");
-        }
-
         let faderType = 2; // obs.EFaderType.Log
         if (algorithm === "iec") {
             faderType = 1;
@@ -85,7 +101,7 @@ function createVolmeter(ws, inputType, inputId, algorithm) {
         } else if (inputType === "microphone") {
             input = createMicrophoneInput(inputId);
         } else {
-            throw new Error("Unknown deviceType: '" + inputType + "', supported is: 'speaker' or 'microphone'.");
+            throw new Error("Unknown device_type: '" + inputType + "', supported is: 'speaker' or 'microphone'.");
         }
 
         volmeter = osn.VolmeterFactory.create(faderType);
@@ -128,3 +144,5 @@ function destroyVolmeter(obj) {
 exports.createVolmeterServer = createVolmeterServer;
 exports.createMicrophoneInput = createMicrophoneInput;
 exports.createSpeakerInput = createSpeakerInput;
+exports.getSpeakers = getSpeakers;
+exports.getMicrophones = getMicrophones;
