@@ -33,6 +33,7 @@ const _ = require("lodash");
 const express = require("express");
 const bodyParser = require('body-parser');
 const obs = require("./obs");
+const volmeter = require("./volmeter");
 
 // create express
 const app = express();
@@ -130,7 +131,7 @@ app.post("/recording/stop", (req, res, next) => {
 
 app.post("/shutdown", (req, res) => {
     shutdown(0);
-})
+});
 
 app.use(function (err, req, res, next) {
     console.error(err.stack)
@@ -139,7 +140,7 @@ app.use(function (err, req, res, next) {
     } else {
         res.status(500).send(JSON.stringify({ status: "error", message: err }));
     }
-})
+});
 
 // startup
 try {
@@ -147,6 +148,7 @@ try {
     server = app.listen(port, "localhost", () => {
         console.log(`Listening at http://localhost:${port}`);
     });
+    volmeter.createVolmeterServer(server);
 } catch (e) {
     console.log(e.message || e);
     shutdown(1);

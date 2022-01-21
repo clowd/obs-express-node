@@ -111,6 +111,14 @@ function init(connectId, workDir, dataDir) {
     osnset.setSetting("Output", "Untitled", "Mode", "Advanced");
     osnset.setSetting("Video", "Untitled", "FPSType", "Fractional FPS Value");
 
+    osn.NodeObs.RegisterSourceCallback((objs) => {
+        // objs is an array of IObsSourceCallbackInfo[] 
+        // https://github.com/stream-labs/desktop/blob/6be5e28afbdd2f7491c650ffd012ae15e671f096/app/services/sources/sources.ts#L57
+        // we don't really care about this global callback, but
+        // unless it's registered, volmeter callbacks are also not processed. 
+        // see https://github.com/stream-labs/obs-studio-node/blob/735ffb80d67d8c1a339848154b6b54bc98fe6458/obs-studio-client/source/callback-manager.cpp
+    });
+
     initialized = true;
     console.log("Started OBS successfully");
 }
