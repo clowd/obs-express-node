@@ -6,6 +6,7 @@ Run `obs-express.exe` and it will launch an http server which can be used to rem
 The following API functions are supported 
 
 - [List Audio Devices](#list-audio-devices)
+- [Volume Monitoring](#volume-monitoring)
 - [Start Recording](#start-recording)
 - [Stop Recording](#stop-recording)
 - [Get Status / Statistics](#get-status--statistics)
@@ -17,7 +18,7 @@ Provides a list of audio devices to be used with `/recording/start`
 
 `GET /audio/speakers`
 
-`GET /audio/microphons`
+`GET /audio/microphones`
 
 *Example Response*
 
@@ -32,6 +33,19 @@ Provides a list of audio devices to be used with `/recording/start`
     "name": "Speakers (D50s)"
   }
 ]
+```
+
+## Volume Monitoring
+Provides a realtime stream of the current audio levels on the specified device.
+
+`ws://.../volmeter?device_type={DeviceType}&device_id={DeviceId}`
+
+`DeviceType` can either be 'microphone' or 'speaker'. `DeviceId` should be an id returned from the appropriate [audio endpoint](#list-audio-devices).
+
+Once the websocket is connected, the client will receive a constant stream of JSON messages containing the current audio levels:
+
+```js
+{ "peak": -12.4654, "magnitude": -20.6984 }
 ```
 
 ## Start Recording
