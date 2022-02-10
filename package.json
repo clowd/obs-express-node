@@ -32,6 +32,6 @@
     "devDependencies": {
         "copy": "^0.3.2",
         "node-gyp": "^8.4.1",
-        "pkg": "^5.5.2"
+        "pkg": "5.3.1"
     }
 }
