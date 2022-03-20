@@ -52,4 +52,5 @@ copy(path.join(__dirname, '../node_modules/@streamlabs/obs-studio-node/**/*'), o
     deleteFolder(path.join(obsLib, "data", "obs-plugins", "obs-text"));
     deleteFolder(path.join(obsLib, "data", "obs-plugins", "rtmp-services"));
     deleteFolder(path.join(obsLib, "data", "obs-plugins", "text-freetype2"));
+    deleteRegex(path.join(obsLib, "data", "obs-plugins", "obs-virtualoutput","obs-virtualsource_32bit"), /\.pdb$/);
 });
