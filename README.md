@@ -1,8 +1,10 @@
 # DEPRECATED DEPRECATED DEPRECATED
 
-This library has been replaced with a [much smaller more efficient implementation](https://github.com/clowd/obs-express-cpp).
+This library has been replaced with a [much smaller, much more efficient implementation](https://github.com/clowd/obs-express).
 
-## obs-express
+---------
+
+## obs-express-node
 Small library to host libobs behind an express-js http server so it can be controlled easily by other processes.
 Wraps the excellent [stream-labs/obs-studio-node](https://github.com/stream-labs/obs-studio-node) project. 
 Run `obs-express.exe` and it will launch an http server which can be used to remotely control obs. 
